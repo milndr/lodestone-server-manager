@@ -1,0 +1,119 @@
+ServerListing {
+    align: center middle;
+}
+
+ServerDisplay {
+    height: 5;
+    border: round rgba(179, 179, 255, 1);
+    max-width: 80;
+}
+
+ServerHead {
+    height: 5;
+    border: blank;
+    max-width: 80;
+}
+
+Digits {
+    dock: left;
+    align: left middle;
+    width: auto;
+    margin: 0 3 0 2
+}
+
+DescBlock {
+    width: auto;
+}
+
+#state.running { color: lime; }
+#state.starting { color: yellow; }
+#state.stopping { color: yellow; }
+#state.stopped { color: grey; }
+#state.crashed { color: crimson; }
+
+#server-screen-tabs {
+    padding-left: 10;
+}
+
+#tab-bar {
+    height: 3;
+    align: left middle;
+}
+
+#tab-bar Button {
+    width: 3;
+    margin-right: 1;
+}
+
+#listing-action-buttons {
+    padding: 0 0 0 0;
+    margin: 0 0 0 0;
+    outline: blank;
+}
+
+#console {
+    min-width: 64;
+    height: 1fr;
+    width: 1fr;
+}
+
+#input {
+    margin-bottom: 1;
+}
+
+#action-buttons {
+    outline: round grey;
+    align: center middle
+
+}
+
+#player-list-view {
+    padding: 1 1 1 1;
+    outline: round grey;
+}
+
+#listing-action-button {
+    
+}
+
+#actions {
+    dock: right;
+    width: 30;
+    height: 6;
+}
+
+#players-list {
+    dock: left;
+    width: 30;
+    height: 8
+}
+
+#tabs {
+    margin: 1 1 1 1;
+}
+
+#home {
+    color: black;
+}
+
+Tab {
+    padding: 0 5 0 5;
+}
+
+#select {
+    margin-right: 1;
+}
+
+#spacer {
+    width: 1fr;
+}
+
+#start, #stop {
+    width: auto;
+}
+
+#create {
+    dock: right;
+    margin-right: 1;
+}
+
