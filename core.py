@@ -2,10 +2,10 @@ import logging
 import queue
 import subprocess
 import threading
+from collections import deque
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Callable
-from collections import deque
+from typing import Callable, Optional
 
 
 class ServerState(Enum):

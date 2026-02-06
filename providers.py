@@ -141,6 +141,7 @@ class SoftwareProvider:
     version_exists: Callable[[str], bool]
     download_jar: Callable[[str, Path, Optional[ProgressCb]], None]
     list_versions: Callable[[None], str]
+    get_versions: Callable[[], list[str]]
 
 
 PROVIDERS: dict[str, SoftwareProvider] = {
@@ -148,11 +149,13 @@ PROVIDERS: dict[str, SoftwareProvider] = {
         version_exists=paper_version_exist,
         download_jar=paper_download_latest_jar,
         list_versions=paper_list_versions,
+        get_versions=paper_get_versions,
     ),
     "vanilla": SoftwareProvider(
         version_exists=vanilla_version_exist,
         download_jar=vanilla_download_latest_jar,
         list_versions=vanilla_list_versions,
+        get_versions=vanilla_get_versions,
     ),
 }
 

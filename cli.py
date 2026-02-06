@@ -110,6 +110,7 @@ class Repl(cmd.Cmd):
             name, software, game_version, download_progress, SERVERS_PATH
         )
 
+    # TODO: Refactor into multiple functions
     def do_wizard(self, arg: None = None):
         """Wizard to create server"""
         name = None

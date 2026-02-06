@@ -7,6 +7,9 @@ from textual.widgets import (
     Button,
     Label,
     Digits,
+    ProgressBar,
+    RadioButton,
+    RadioSet,
     Static,
     RichLog,
     ListView,
@@ -16,11 +19,107 @@ from textual.widgets import (
     ContentSwitcher,
 )
 from textual.reactive import reactive
+from textual import work
 
 from server_manager import ServerManager
 from pathlib import Path
 from core import ServerState, Server
 import logging
+
+
+SERVERS_PATH = Path.cwd() / "Servers"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler("tui.log", encoding="utf-8"),
+    ],
+    force=True,
+)
+
+logger = logging.getLogger(__name__)
+logger.info("Logging started")
+
+
+class ServerWizard(Screen):
+    def __init__(self, server_manager: ServerManager) -> None:
+        super().__init__()
+        self.server_manager = server_manager
+        self.server_name = None
+        self.software = None
+        self.game_version = None
+
+    def compose(self) -> ComposeResult:
+        if not self.server_name:
+            with Container(id="name_choise"):
+                yield Label("Choose a name for your server")
+                yield Input(placeholder="Survival1")
+                yield Label("", id="error-label")
+        elif not self.software:
+            with Container(id="software_choise"):
+                yield Label("Choose a server software for your server")
+                with RadioSet(id="chosen_software"):
+                    yield RadioButton("Paper", name="paper")
+                    yield RadioButton("Vanilla", name="vanilla")
+                yield Button("Next", id="next")
+        elif not self.game_version:
+            with Container(id="game_version_choise"):
+                yield Label("Choose a Minecraft version")
+                yield Input(placeholder="1.12.2")
+        else:
+            yield ProgressBar(id="download-progress")
+            self.install_server()
+
+    @work(thread=True)
+    def install_server(self) -> None:
+        try:
+            created = self.server_manager.create_server(
+                self.server_name,
+                self.software,
+                self.game_version,
+                self.make_progress,
+                SERVERS_PATH,
+            )
+            created.accept_eula()
+        except Exception as e:
+            logger.error(f"Error creating server: {e}")
+            self.app.notify(f"Error: {e}", severity="error")
+        finally:
+            self.app.call_from_thread(self.app.pop_screen)
+
+    def make_progress(self, downloaded: int, total: int) -> None:
+        self.app.call_from_thread(
+            self.query_one("#download-progress").update,
+            total=total,
+            progress=downloaded,
+        )
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if not self.server_name:
+            input_val = event.value.strip()
+            if input_val != "" and input_val not in self.server_manager.names():
+                self.server_name = input_val
+                logger.info(f"Chosen name : {self.server_name}")
+            else:
+                self.query_one("#error-label").update(
+                    "Please choose a valid unique name"
+                )
+            self.refresh(recompose=True)
+        elif not self.game_version:
+            self.game_version = event.value.strip()
+            logger.info(f"Chosen version: {self.game_version}")
+            self.refresh(recompose=True)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "next":
+            selected_button = self.query_one(
+                "#chosen_software", RadioSet
+            ).pressed_button
+            if selected_button is not None:
+                self.software = selected_button.name
+                logger.info(f"Chosen software : {self.software}")
+                self.refresh(recompose=True)
 
 
 class ServerOverview(Static):
@@ -61,14 +160,12 @@ class ServerOverview(Static):
 
         self.server.add_log_callback(self._on_log)
 
-
     def on_unmount(self) -> None:
         self.server.remove_log_callback(self._on_log)
 
     def _on_log(self, server: Server, line: str) -> None:
         if self.is_mounted:
             self.app.call_from_thread(self.log_widget.write, line)
-
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         cmd = event.value.strip()
@@ -200,10 +297,16 @@ class ServerDisplay(HorizontalGroup):
         state_label.add_class(state.value.lower())
         state_label.update(state.value)
 
-        self.start_btn.display = state in {ServerState.STOPPED, ServerState.CRASHED, ServerState.STOPPING}
+        self.start_btn.display = state in {
+            ServerState.STOPPED,
+            ServerState.CRASHED,
+            ServerState.STOPPING,
+        }
         self.stop_btn.display = state in {ServerState.RUNNING, ServerState.STARTING}
 
-        self.start_btn.disabled = state != ServerState.STOPPED and state != ServerState.CRASHED
+        self.start_btn.disabled = (
+            state != ServerState.STOPPED and state != ServerState.CRASHED
+        )
         self.stop_btn.disabled = state != ServerState.RUNNING
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -216,8 +319,16 @@ class ServerDisplay(HorizontalGroup):
 
 
 class ServerHead(HorizontalGroup):
+    def __init__(self, server_manager: ServerManager):
+        super().__init__()
+        self.server_manager = server_manager
+
     def compose(self):
         yield Button("Create", variant="success", id="create")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "create":
+            self.app.push_screen(ServerWizard(self.server_manager))
 
 
 class ServerListing(VerticalScroll):
@@ -226,7 +337,7 @@ class ServerListing(VerticalScroll):
         self.server_manager = server_manager
 
     def compose(self) -> ComposeResult:
-        yield ServerHead()
+        yield ServerHead(self.server_manager)
 
         for index, server in enumerate(self.server_manager, start=1):
             yield ServerDisplay(server, index)
