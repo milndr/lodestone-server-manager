@@ -25,6 +25,7 @@ from textual.message import Message
 from lodestone.core.manager import ServerManager
 from pathlib import Path
 from lodestone.core.server import ServerState, Server
+import lodestone.core.providers as providers
 import logging
 
 
@@ -74,6 +75,7 @@ class ServerWizard(Screen):
             with Container(id="game_version_choise"):
                 yield Label("Choose a Minecraft version")
                 yield Input(placeholder="1.12.2")
+                yield Label("", id="error-label")
         else:
             yield ProgressBar(id="download-progress")
             self.install_server()
@@ -115,8 +117,15 @@ class ServerWizard(Screen):
                 )
             self.refresh(recompose=True)
         elif not self.game_version:
-            self.game_version = event.value.strip()
-            logger.info(f"Chosen version: {self.game_version}")
+            input_val = event.value.strip()
+            provider = providers.get_provider(self.software)
+            if provider.version_exists(input_val):
+                self.game_version = input_val
+                logger.info(f"Chosen version: {self.game_version}")
+            else:
+                self.query_one("#error-label").update(
+                    "Please choose a valid game version"
+                )
             self.refresh(recompose=True)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -183,7 +192,10 @@ class ServerOverview(Static):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "start":
-            self.run_worker(self.server.start, thread=True)
+            try:
+                self.run_worker(self.server.start, thread=True)
+            except RuntimeError as e:
+                self.app.notify(f"{e}", severity="error")
         elif event.button.id == "stop":
             self.run_worker(self.server.stop, thread=True)
         elif event.button.id == "restart":
