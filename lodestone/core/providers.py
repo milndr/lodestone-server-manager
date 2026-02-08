@@ -1,4 +1,3 @@
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
@@ -6,7 +5,7 @@ import functools
 
 import requests
 
-from utils import download_file
+from lodestone.utils.helpers import download_file
 
 HEADERS = {"user-agent": "lodestone-server-manager/0.0.1"}
 

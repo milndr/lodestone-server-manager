@@ -1,5 +1,5 @@
 tui:
-	python tui.py
+	uv run lodestone --tui
 
 cli:
-	python cli.py
+	uv run lodestone

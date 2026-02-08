@@ -6,9 +6,9 @@ import time
 from rich import print
 from rich.logging import RichHandler
 
-import providers
-from server_manager import ServerManager
-from core import ServerState
+from lodestone.core import providers
+from lodestone.core.manager import ServerManager
+from lodestone.core.server import ServerState
 
 HEADERS = {"User-Agent": "lodestone-server-manager/0.0.1"}
 SERVERS_PATH = Path.cwd() / "Servers"
@@ -363,15 +363,3 @@ class Repl(cmd.Cmd):
 
     do_quit = do_exit
     do_EOF = do_exit
-
-
-if __name__ == "__main__":
-    print(
-        "[dark_slate_gray3]Lodestone Server Manager\n[light_cyan3]Type help or ? to list commands."
-    )
-    current = Repl()
-    try:
-        current.cmdloop()
-    except (EOFError, KeyboardInterrupt):
-        print()
-        current.do_exit()

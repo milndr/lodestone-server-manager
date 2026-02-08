@@ -22,9 +22,9 @@ from textual.reactive import reactive
 from textual import work
 from textual.message import Message
 
-from server_manager import ServerManager
+from lodestone.core.manager import ServerManager
 from pathlib import Path
-from core import ServerState, Server
+from lodestone.core.server import ServerState, Server
 import logging
 
 
@@ -392,8 +392,3 @@ class Lodestone(App):
         self.theme = (
             "textual-dark" if self.theme == "textual-light" else "textual-light"
         )
-
-
-if __name__ == "__main__":
-    app = Lodestone()
-    app.run()

@@ -1,10 +1,10 @@
 from pathlib import Path
-from core import Server
+from lodestone.core.server import Server
 from typing import Dict, Callable, Optional
 import json
 import logging
 
-import providers
+from lodestone.core import providers
 
 
 class ServerManager:
