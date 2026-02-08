@@ -39,6 +39,11 @@ select = [
   "ANN", # type annotations
   "T20", # print / debug statements
   "Q",   # quote consistency
+  "I",   # isort (import sorting)
+  "UP",  # pyupgrade
+  "PTH", # use pathlib
+  "SIM", # simplify
+  "RET", # return
 ]
 
 # Noisy or contextually acceptable rules

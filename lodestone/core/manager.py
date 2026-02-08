@@ -1,16 +1,16 @@
-from pathlib import Path
-from lodestone.core.server import Server
-from typing import Dict, Callable, Optional
 import json
 import logging
+from collections.abc import Callable
+from pathlib import Path
 
 from lodestone.core import providers
+from lodestone.core.server import Server
 
 
 class ServerManager:
     def __init__(self, servers_path: Path):
         self.servers_path = servers_path
-        self.servers: Dict[str, Server] = {}
+        self.servers: dict[str, Server] = {}
         self.load_all_from_path()
 
     def __getitem__(self, name: str) -> Server:
@@ -71,7 +71,7 @@ class ServerManager:
             logging.warning("Coulnd't read the manifest")
             return None
 
-    ProgressCb = Callable[[int, Optional[int]], None]
+    ProgressCb = Callable[[int, int | None], None]
 
     def create_server(
         self,
@@ -99,7 +99,7 @@ class ServerManager:
 
         try:
             provider = providers.get_provider(software)
-            provider.download_jar(game_version, server_path, progress=progress)
+            provider.download_jar(game_version, server_path, progress)
         except ValueError as e:
             raise RuntimeError(f"[yellow]{e}") from e
 

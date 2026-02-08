@@ -4,7 +4,7 @@ import argparse
 def main():
     parser = argparse.ArgumentParser(description="Lodestone Server Manager")
     parser.add_argument("--tui", action="store_true", help="Start the TUI interface")
-    args, unknown = parser.parse_known_args()
+    args, _unknown = parser.parse_known_args()
 
     if args.tui:
         from lodestone.ui.tui.app import Lodestone
@@ -12,8 +12,9 @@ def main():
         app = Lodestone()
         app.run()
     else:
-        from lodestone.ui.cli import Repl
         from rich import print
+
+        from lodestone.ui.cli import Repl
 
         print("[dark_slate_gray3]Lodestone Server Manager")
         print("[light_cyan3]Type help or ? to list commands.")

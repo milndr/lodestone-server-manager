@@ -1,7 +1,8 @@
+import functools
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional
-import functools
+from typing import Any
 
 import requests
 
@@ -9,7 +10,7 @@ from lodestone.utils.helpers import download_file
 
 HEADERS = {"user-agent": "lodestone-server-manager/0.0.1"}
 
-ProgressCb = Callable[[int, Optional[int]], None]
+ProgressCb = Callable[[int, int | None], None]
 
 
 @functools.lru_cache(maxsize=1)
@@ -128,7 +129,7 @@ def vanilla_download_latest_jar(
             progress,
         )
     else:
-        RuntimeError("no jar for this version")
+        raise RuntimeError("no jar for this version")
 
 
 def vanilla_version_exist(game_version: str):
@@ -138,9 +139,9 @@ def vanilla_version_exist(game_version: str):
 @dataclass(frozen=True)
 class SoftwareProvider:
     version_exists: Callable[[str], bool]
-    download_jar: Callable[[str, Path, Optional[ProgressCb]], None]
-    list_versions: Callable[[None], str]
-    get_versions: Callable[[], list[str]]
+    download_jar: Callable[[str, Path, ProgressCb | None], None]
+    list_versions: Callable[[], None]
+    get_versions: Callable[[], Any]
 
 
 PROVIDERS: dict[str, SoftwareProvider] = {

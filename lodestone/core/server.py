@@ -3,9 +3,9 @@ import queue
 import subprocess
 import threading
 from collections import deque
+from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Optional
 
 
 class ServerState(Enum):
@@ -27,14 +27,14 @@ class Server:
         self.game_version = game_version
         self.path = path
 
-        self.min_ram_alloc: Optional[int] = None
+        self.min_ram_alloc: int | None = None
         self.max_ram_alloc: int = 2
-        self.additional_args: Optional[list[str]] = None
+        self.additional_args: list[str] | None = None
 
         self.properties: dict[str, bool | int | str | None] = {}
 
         self.state = ServerState.STOPPED
-        self.process: Optional[subprocess.Popen] = None
+        self.process: subprocess.Popen | None = None
         self.log_queue: queue.Queue[str] = queue.Queue()
         self.log_buffer = deque(maxlen=10_000)
         self.stop_event = threading.Event()
@@ -62,9 +62,9 @@ class Server:
         out = {}
 
         try:
-            with open(properties_path, "r", encoding="utf-8") as file:
-                for line in file:
-                    line = line.strip()
+            with properties_path.open(encoding="utf-8") as file:
+                for raw_line in file:
+                    line = raw_line.strip()
                     if not line or line.startswith("#"):
                         continue
 
@@ -90,7 +90,7 @@ class Server:
         properties_path = self.path / "server.properties"
         data = self.properties
 
-        with open(properties_path, "w", encoding="utf-8") as file:
+        with properties_path.open("w", encoding="utf-8") as file:
             for key, value in data.items():
                 if isinstance(value, bool):
                     value_str = "true" if value else "false"
@@ -212,7 +212,7 @@ class Server:
     def add_log_callback(self, callback: LogCallback) -> None:
         self._log_callbacks.append(callback)
 
-    def remove_log_callback(self, callback: StateCallback):
+    def remove_log_callback(self, callback: LogCallback):
         if callback in self._log_callbacks:
             self._log_callbacks.remove(callback)
 
@@ -228,10 +228,9 @@ class Server:
                 line = raw_line.rstrip("\n")
                 self.log_buffer.append(line)
 
-                if self.state == ServerState.STARTING:
-                    if self._is_server_ready(line):
-                        logging.info(f"Server {self.name} is ready")
-                        self._set_state(ServerState.RUNNING)
+                if self.state == ServerState.STARTING and self._is_server_ready(line):
+                    logging.info(f"Server {self.name} is ready")
+                    self._set_state(ServerState.RUNNING)
 
                 if self._is_crash_line(line):
                     logging.warning(f"Crash detected in logs: {line}")

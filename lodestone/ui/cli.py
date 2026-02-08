@@ -1,10 +1,15 @@
 import cmd
 import logging
-from pathlib import Path
 import time
+from pathlib import Path
+from shutil import rmtree
 
 from rich import print
+from rich.console import Console
 from rich.logging import RichHandler
+from rich.progress import Progress
+from rich.prompt import Prompt
+from rich.table import Table
 
 from lodestone.core import providers
 from lodestone.core.manager import ServerManager
@@ -28,11 +33,9 @@ class Repl(cmd.Cmd):
     prompt = "> "
 
     def rich_progress(self, label: str):
-        from rich.progress import Progress
+        task_id = None
 
         progress = Progress(transient=True)
-
-        task_id = None
 
         def cb(done: int, total: int | None) -> None:
             nonlocal task_id
@@ -53,11 +56,8 @@ class Repl(cmd.Cmd):
         logger.info("Started")
         self.server_manager = ServerManager(SERVERS_PATH)
 
-    def do_list(self, arg: str) -> None:
+    def do_list(self, _arg: str) -> None:
         """List all servers"""
-
-        from rich.table import Table
-        from rich.console import Console
 
         state_colors = {
             ServerState.STOPPED: "red",
@@ -111,7 +111,7 @@ class Repl(cmd.Cmd):
         )
 
     # TODO: Refactor into multiple functions
-    def do_wizard(self, arg: None = None):
+    def do_wizard(self, _arg: None = None):
         """Wizard to create server"""
         name = None
         software = None
@@ -169,10 +169,9 @@ class Repl(cmd.Cmd):
             if choise == "y":
                 self.server_manager[name].accept_eula()
                 break
-            elif choise == "n":
+            if choise == "n":
                 return
-            else:
-                print("[yellow]Please choose a valid choise.")
+            print("[yellow]Please choose a valid choise.")
         while True:
             print(
                 "[dark_slate_gray1]Do you want to start your server ? [green]y[bright_white]/[red]n [white]\n[cornflower_blue]Wizard [white]> ",
@@ -182,10 +181,9 @@ class Repl(cmd.Cmd):
             if choise == "y":
                 self.server_manager[name].start()
                 break
-            elif choise == "n":
+            if choise == "n":
                 return
-            else:
-                print("[yellow]Please choose a valid choise.")
+            print("[yellow]Please choose a valid choise.")
 
     def do_start(self, arg: str):
         """start <server>"""
@@ -212,8 +210,7 @@ class Repl(cmd.Cmd):
             while server.state == ServerState.RUNNING:
                 while not server.log_queue.empty():
                     print(server.log_queue.get())
-                else:
-                    time.sleep(0.05)
+                time.sleep(0.05)
 
                 cmd = input(f"{server.name} (CTRL + D to quit) > ").strip()
                 if not cmd:
@@ -260,9 +257,6 @@ class Repl(cmd.Cmd):
             print(f"[yellow]{e}")
 
     def do_delete(self, arg: str):
-        from rich.prompt import Prompt
-        from shutil import rmtree
-
         if arg not in self.server_manager.names():
             print(f"[yellow]No server with name {arg}")
             return
@@ -273,10 +267,9 @@ class Repl(cmd.Cmd):
             if choise == "y":
                 rmtree(self.server_manager[arg].path)
                 return
-            elif choise == "n":
+            if choise == "n":
                 return
-            else:
-                print("[yellow]Please enter a valid answer (y/n).")
+            print("[yellow]Please enter a valid answer (y/n).")
 
     def do_send(self, arg: str):
         """send <server> <command>"""
@@ -293,9 +286,6 @@ class Repl(cmd.Cmd):
         if arg not in self.server_manager.names():
             print(f"[yellow]No server with name {arg}")
             return
-
-        from rich.table import Table
-        from rich.console import Console
 
         table = Table(title=f"{arg} Properties")
         table.add_column("Property")
@@ -341,11 +331,11 @@ class Repl(cmd.Cmd):
         """list-versions (paper)"""
         try:
             provider = providers.get_provider(arg)
+            provider.list_versions()
         except ValueError as e:
             print(f"[yellow]{e}")
-        provider.list_versions()
 
-    def do_exit(self, arg: None = None):
+    def do_exit(self, _arg: None = None):
         """Exit"""
         for s in self.server_manager.values():
             if s.state == ServerState.RUNNING:
@@ -353,11 +343,11 @@ class Repl(cmd.Cmd):
                 logging.info("Stopped %s", s.name)
         return True
 
-    def do_get(self, arg: str):
+    def do_get(self, _arg: str):
         print(self.server_manager["1"].properties_to_dict())
         print()
 
-    def do_refresh(self, arg: None = None):
+    def do_refresh(self, _arg: None = None):
         """Refresh servers registry"""
         self.server_manager = ServerManager(SERVERS_PATH)
 

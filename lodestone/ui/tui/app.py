@@ -1,33 +1,33 @@
+import logging
+from pathlib import Path
+
+from textual import work
 from textual.app import App, ComposeResult
+from textual.containers import Container, HorizontalGroup, VerticalGroup, VerticalScroll
+from textual.message import Message
+from textual.reactive import reactive
 from textual.screen import Screen
-from textual.containers import HorizontalGroup, VerticalScroll, VerticalGroup, Container
 from textual.widgets import (
+    Button,
+    ContentSwitcher,
+    Digits,
     Footer,
     Header,
-    Button,
+    Input,
     Label,
-    Digits,
+    ListView,
     ProgressBar,
     RadioButton,
     RadioSet,
-    Static,
     RichLog,
-    ListView,
-    Input,
+    Static,
     Tab,
     Tabs,
-    ContentSwitcher,
 )
-from textual.reactive import reactive
-from textual import work
-from textual.message import Message
 
+from lodestone.core import providers
 from lodestone.core.manager import ServerManager
-from pathlib import Path
-from lodestone.core.server import ServerState, Server
-import lodestone.core.providers as providers
-import logging
-
+from lodestone.core.server import Server, ServerState
 
 SERVERS_PATH = Path.cwd() / "Servers"
 
@@ -82,6 +82,14 @@ class ServerWizard(Screen):
 
     @work(thread=True)
     def install_server(self) -> None:
+        if (
+            self.server_name is None
+            or self.software is None
+            or self.game_version is None
+        ):
+            logger.error("Missing server creation parameters")
+            return
+
         try:
             created = self.server_manager.create_server(
                 self.server_name,
@@ -98,9 +106,9 @@ class ServerWizard(Screen):
         finally:
             self.app.call_from_thread(self.app.pop_screen)
 
-    def make_progress(self, downloaded: int, total: int) -> None:
+    def make_progress(self, downloaded: int, total: int | None) -> None:
         self.app.call_from_thread(
-            self.query_one("#download-progress").update,
+            self.query_one("#download-progress", ProgressBar).update,
             total=total,
             progress=downloaded,
         )
@@ -112,18 +120,20 @@ class ServerWizard(Screen):
                 self.server_name = input_val
                 logger.info(f"Chosen name : {self.server_name}")
             else:
-                self.query_one("#error-label").update(
+                self.query_one("#error-label", Label).update(
                     "Please choose a valid unique name"
                 )
             self.refresh(recompose=True)
         elif not self.game_version:
             input_val = event.value.strip()
+            if self.software is None:
+                return
             provider = providers.get_provider(self.software)
             if provider.version_exists(input_val):
                 self.game_version = input_val
                 logger.info(f"Chosen version: {self.game_version}")
             else:
-                self.query_one("#error-label").update(
+                self.query_one("#error-label", Label).update(
                     "Please choose a valid game version"
                 )
             self.refresh(recompose=True)
@@ -309,7 +319,7 @@ class ServerDisplay(HorizontalGroup):
         self._update_buttons(state)
 
     def _update_buttons(self, state: ServerState) -> None:
-        state_label = self.desc.query_one("#state")
+        state_label = self.desc.query_one("#state", Label)
 
         state_label.remove_class(
             "stopped", "starting", "running", "stopping", "crashed"
@@ -324,8 +334,9 @@ class ServerDisplay(HorizontalGroup):
         }
         self.stop_btn.display = state in {ServerState.RUNNING, ServerState.STARTING}
 
-        self.start_btn.disabled = (
-            state != ServerState.STOPPED and state != ServerState.CRASHED
+        self.start_btn.disabled = state not in (
+            ServerState.STOPPED,
+            ServerState.CRASHED,
         )
         self.stop_btn.disabled = state != ServerState.RUNNING
 

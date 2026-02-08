@@ -1,11 +1,11 @@
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
 
 import requests
 
 HEADERS = {"User-Agent": "lodestone-server-manager/0.0.1"}
 
-ProgressCb = Callable[[int, Optional[int]], None]
+ProgressCb = Callable[[int, int | None], None]
 
 
 def download_file(
