@@ -20,6 +20,7 @@ from textual.widgets import (
 )
 from textual.reactive import reactive
 from textual import work
+from textual.message import Message
 
 from server_manager import ServerManager
 from pathlib import Path
@@ -40,6 +41,12 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 logger.info("Logging started")
+
+
+class ServerCreated(Message):
+    def __init__(self, server: Server) -> None:
+        super().__init__()
+        self.server = server
 
 
 class ServerWizard(Screen):
@@ -82,6 +89,7 @@ class ServerWizard(Screen):
                 SERVERS_PATH,
             )
             created.accept_eula()
+            self.post_message(ServerCreated(created))
         except Exception as e:
             logger.error(f"Error creating server: {e}")
             self.app.notify(f"Error: {e}", severity="error")
@@ -342,6 +350,10 @@ class ServerListing(VerticalScroll):
         for index, server in enumerate(self.server_manager, start=1):
             yield ServerDisplay(server, index)
 
+    def on_server_created(self, event: ServerCreated) -> None:
+        new_index = len(self.server_manager)
+        self.mount(ServerDisplay(event.server, new_index))
+
 
 class Lodestone(App):
     CSS_PATH = "style.tcss"
@@ -359,7 +371,15 @@ class Lodestone(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.push_screen(HomeScreen(self.server_manager))
+        self.home_screen = HomeScreen(self.server_manager)
+        self.push_screen(self.home_screen)
+
+    def on_server_created(self, event: ServerCreated) -> None:
+        try:
+            listing = self.home_screen.query_one(ServerListing)
+            listing.on_server_created(event)
+        except Exception:
+            pass
 
     def on_unmount(self) -> None:
         for s in self.server_manager.values():

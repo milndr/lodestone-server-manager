@@ -21,6 +21,11 @@ Digits {
     margin: 0 3 0 2
 }
 
+ServerWizard {
+    width: 32;
+    align: center middle;
+}
+
 DescBlock {
     width: auto;
 }
@@ -116,4 +121,3 @@ Tab {
     dock: right;
     margin-right: 1;
 }
-
