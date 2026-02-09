@@ -2,6 +2,7 @@ import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
+from shutil import rmtree
 
 from lodestone.core import providers
 from lodestone.core.server import Server
@@ -86,6 +87,8 @@ class ServerManager:
 
         server = Server(name, software, game_version, server_path)
 
+        self.load_from_server_instance(server)
+
         manifest = {
             "schema": 1,
             "name": name,
@@ -102,11 +105,22 @@ class ServerManager:
             provider.download_jar(game_version, server_path, progress)
         except ValueError as e:
             raise RuntimeError(f"[yellow]{e}") from e
+        except InterruptedError:
+            rmtree(server_path)
 
         (server_path / "server.properties").write_text(
             "# Managed by Lodestone-server-manager"
         )
 
-        self.load_from_server_instance(server)
-
         return server
+
+    def delete_server(self, name: str):
+        if name not in self.names():
+            raise RuntimeError("No server with that name.")
+
+        try:
+            rmtree(self[name].path)
+        except Exception as err:
+            raise RuntimeError("Couldn't find server's directory") from err
+
+        del self.servers[name]

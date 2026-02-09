@@ -2,7 +2,6 @@ import cmd
 import logging
 import time
 from pathlib import Path
-from shutil import rmtree
 
 from rich import print
 from rich.console import Console
@@ -265,7 +264,7 @@ class Repl(cmd.Cmd):
                 f"[red]Are you sure you want to delete server {arg} (y/n) ? (this action cannot be undone)\n> "
             ).strip()
             if choise == "y":
-                rmtree(self.server_manager[arg].path)
+                self.server_manager.delete_server(arg)
                 return
             if choise == "n":
                 return

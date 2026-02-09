@@ -11,9 +11,10 @@ ProgressCb = Callable[[int, int | None], None]
 def download_file(
     url: str,
     dest: Path,
+    session: requests.Session,
     progress: ProgressCb | None = None,
 ) -> None:
-    with requests.get(url, headers=HEADERS, stream=True, timeout=30) as r:
+    with session.get(url, headers=HEADERS, stream=True, timeout=30) as r:
         r.raise_for_status()
         total = (
             int(r.headers["content-length"]) if "content-length" in r.headers else None

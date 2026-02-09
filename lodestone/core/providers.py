@@ -10,6 +10,9 @@ from lodestone.utils.helpers import download_file
 
 HEADERS = {"user-agent": "lodestone-server-manager/0.0.1"}
 
+s = requests.Session()
+s.headers.update(HEADERS)
+
 ProgressCb = Callable[[int, int | None], None]
 
 
@@ -17,7 +20,7 @@ ProgressCb = Callable[[int, int | None], None]
 def paper_get_versions():
     url = "https://fill.papermc.io/v3/projects/paper"
     try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
+        response = s.get(url, timeout=10)
     except requests.exceptions.Timeout as err:
         raise RuntimeError("Request timed out") from err
     response.raise_for_status()
@@ -47,7 +50,7 @@ def paper_download_latest_jar(
 ):
     url = f"https://fill.papermc.io/v3/projects/paper/versions/{game_version}/builds"
     try:
-        r = requests.get(url, headers=HEADERS, timeout=10)
+        r = s.get(url, timeout=10)
     except requests.exceptions.Timeout as err:
         raise RuntimeError("Request timed out") from err
     r.raise_for_status()
@@ -57,6 +60,7 @@ def paper_download_latest_jar(
             download_file(
                 build["downloads"]["server:default"]["url"],
                 server_path / "server.jar",
+                s,
                 progress,
             )
             break
@@ -66,7 +70,7 @@ def paper_download_latest_jar(
 def vanilla_get_json():
     url = "https://launchermeta.mojang.com/mc/game/version_manifest.json"
     try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
+        response = s.get(url, timeout=10)
     except requests.exceptions.Timeout as err:
         raise RuntimeError("Request timed out") from err
     response.raise_for_status()
@@ -115,7 +119,7 @@ def vanilla_download_latest_jar(
     for version in vanilla_get_json()["versions"]:
         if version["type"] == "release" and version["id"] == game_version:
             try:
-                response = requests.get(version["url"], headers=HEADERS, timeout=10)
+                response = s.get(version["url"], timeout=10)
             except requests.exceptions.Timeout as err:
                 raise RuntimeError("Request timed out") from err
             response.raise_for_status()
@@ -126,6 +130,7 @@ def vanilla_download_latest_jar(
         download_file(
             jar_url,
             server_path / "server.jar",
+            s,
             progress,
         )
     else:
