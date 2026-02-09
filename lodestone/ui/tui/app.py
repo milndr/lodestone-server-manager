@@ -59,26 +59,24 @@ class ServerWizard(Screen):
         self.game_version = None
 
     def compose(self) -> ComposeResult:
-        if not self.server_name:
-            with Container(id="name_choise"):
-                yield Label("Choose a name for your server")
+        with Container(id="wizard"):
+            if not self.server_name:
+                yield Static("Choose a name for your server")
                 yield Input(placeholder="Survival1")
                 yield Label("", id="error-label")
-        elif not self.software:
-            with Container(id="software_choise"):
-                yield Label("Choose a server software for your server")
+            elif not self.software:
+                yield Static("Choose a server software for your server")
                 with RadioSet(id="chosen_software"):
                     yield RadioButton("Paper", name="paper")
                     yield RadioButton("Vanilla", name="vanilla")
                 yield Button("Next", id="next")
-        elif not self.game_version:
-            with Container(id="game_version_choise"):
-                yield Label("Choose a Minecraft version")
+            elif not self.game_version:
+                yield Static("Choose a Minecraft version")
                 yield Input(placeholder="1.12.2")
-                yield Label("", id="error-label")
-        else:
-            yield ProgressBar(id="download-progress")
-            self.install_server()
+                yield Label("", id="error-label2")
+            else:
+                yield ProgressBar(id="download-progress")
+                self.install_server()
 
     @work(thread=True)
     def install_server(self) -> None:
@@ -133,7 +131,7 @@ class ServerWizard(Screen):
                 self.game_version = input_val
                 logger.info(f"Chosen version: {self.game_version}")
             else:
-                self.query_one("#error-label", Label).update(
+                self.query_one("#error-label2", Label).update(
                     "Please choose a valid game version"
                 )
             self.refresh(recompose=True)
@@ -279,7 +277,7 @@ class DescBlock(VerticalGroup):
             f"{self.server.software.capitalize()} {self.server.game_version}",
             id="software",
         )
-        yield Static(self.server.state.value, id="state")
+        yield Label(self.server.state.value, id="state")
 
 
 class ServerDisplay(HorizontalGroup):

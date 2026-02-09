@@ -22,8 +22,33 @@ Digits {
 }
 
 ServerWizard {
-    width: 32;
     align: center middle;
+    background: $background;
+}
+
+#wizard {
+    width: 60;
+    height: auto;
+    border: round rgba(179, 179, 255, 1);
+    background: $surface;
+    padding: 1 2;
+}
+
+#wizard Static {
+    text-align: center;
+    width: 100%;
+}
+
+#wizard Input {
+    margin: 1 0;
+}
+
+#wizard Button {
+    width: 100%;
+}
+
+#wizard RadioSet {
+    margin: 1 0;
 }
 
 DescBlock {
