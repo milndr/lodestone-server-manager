@@ -3,7 +3,14 @@ from pathlib import Path
 
 from textual import work
 from textual.app import App, ComposeResult
-from textual.containers import Container, HorizontalGroup, VerticalGroup, VerticalScroll
+from textual.containers import (
+    Container,
+    HorizontalGroup,
+    Right,
+    Vertical,
+    VerticalGroup,
+    VerticalScroll,
+)
 from textual.message import Message
 from textual.reactive import reactive
 from textual.screen import Screen
@@ -59,7 +66,7 @@ class ServerWizard(Screen):
         self.game_version = None
 
     def compose(self) -> ComposeResult:
-        with Container(id="wizard"):
+        with Vertical(id="wizard"):
             if not self.server_name:
                 yield Static("Choose a name for your server")
                 yield Input(placeholder="Survival1")
@@ -75,6 +82,7 @@ class ServerWizard(Screen):
                 yield Input(placeholder="1.12.2")
                 yield Label("", id="error-label2")
             else:
+                # FIXME: The pourcentage and the ETA are not displayed
                 yield ProgressBar(id="download-progress")
                 self.install_server()
 
@@ -235,19 +243,19 @@ class ServerScreen(Screen):
                     yield ServerOverview(self.server)
 
                 with Container(id="players"):
-                    yield Label("Players view")
+                    yield Label("Not implemented yet")
 
                 with Container(id="serv-settings"):
-                    yield Label("Server settings view")
+                    yield Label("Not implemented yet")
 
                 with Container(id="add-ons"):
-                    yield Label("Add-ons view")
+                    yield Label("Not implemented yet")
 
                 with Container(id="configs"):
-                    yield Label("Configurations view")
+                    yield Label("Not implemented yet")
 
                 with Container(id="worlds"):
-                    yield Label("Worlds view")
+                    yield Label("Not implemented yet")
 
     def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
         self.switcher.current = event.tab.id
@@ -287,18 +295,16 @@ class ServerDisplay(HorizontalGroup):
         super().__init__()
         self.server = server
         self.index = index
+        self.start_btn = Button("Start", variant="success", id="start")
+        self.stop_btn = Button("Stop", variant="error", id="stop")
 
     def compose(self):
         yield Digits(str(self.index))
         self.desc = DescBlock(self.server)
         yield self.desc
-        yield Static(id="spacer")
 
         with VerticalGroup(id="listing-action-buttons"):
-            self.start_btn = Button("Start", variant="success", id="start")
-            self.stop_btn = Button("Stop", variant="error", id="stop")
-            yield self.start_btn
-            yield self.stop_btn
+            yield Right(self.start_btn, self.stop_btn)
 
         yield Button("Select", id="select")
 

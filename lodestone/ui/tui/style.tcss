@@ -132,6 +132,7 @@ Tab {
 
 #select {
     margin-right: 1;
+    margin-left: 1;
 }
 
 #spacer {

@@ -77,8 +77,6 @@ class Server:
                         value.startswith("-") and value[1:].isdigit()
                     ):
                         out[key] = int(value)
-                    elif value == "":
-                        out[key] = None
                     else:
                         out[key] = value
         except FileNotFoundError as err:
@@ -94,8 +92,6 @@ class Server:
             for key, value in data.items():
                 if isinstance(value, bool):
                     value_str = "true" if value else "false"
-                elif value is None:
-                    value_str = ""
                 else:
                     value_str = str(value)
 
