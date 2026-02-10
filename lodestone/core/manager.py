@@ -9,6 +9,8 @@ from lodestone.core.server import Server
 
 
 class ServerManager:
+    __slots__ = ("servers_path", "servers")
+
     def __init__(self, servers_path: Path):
         self.servers_path = servers_path
         self.servers: dict[str, Server] = {}
@@ -69,7 +71,7 @@ class ServerManager:
             return server
 
         except (KeyError, json.JSONDecodeError):
-            logging.warning("Coulnd't read the manifest")
+            logging.warning("Couldn't read the manifest")
             return None
 
     ProgressCb = Callable[[int, int | None], None]

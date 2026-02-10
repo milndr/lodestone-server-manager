@@ -52,7 +52,7 @@ DeleteScreen Button {
 #players-list {
     border: round grey;
     dock: left;
-    width: 30;
+    width: 16;
     height: 8;
 }
 
@@ -61,10 +61,6 @@ DeleteScreen Button {
     dock: right;
     width: auto;
     border: round grey;
-}
-
-#player-list-view {
-    padding: 1 1 1 1;
 }
 
 #tabs {

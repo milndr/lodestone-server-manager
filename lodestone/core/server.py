@@ -1,5 +1,4 @@
 import logging
-import queue
 import subprocess
 import threading
 from collections import deque
@@ -18,9 +17,34 @@ class ServerState(Enum):
 
 StateCallback = Callable[["Server", ServerState], None]
 LogCallback = Callable[["Server", str], None]
+PlayerJoinedCallback = Callable[["Server", str], None]
+PlayerLeftCallback = Callable[["Server", str], None]
 
 
 class Server:
+    __slots__ = (
+        "name",
+        "software",
+        "game_version",
+        "path",
+        "min_ram_alloc",
+        "max_ram_alloc",
+        "additional_args",
+        "properties",
+        "online_players",
+        "state",
+        "process",
+        "log_buffer",
+        "stop_event",
+        "lock",
+        "_state_callbacks",
+        "_log_callbacks",
+        "_stop_requested",
+        "_playerjoined_callbacks",
+        "_playerleft_callbacks",
+        "log_thread",
+    )
+
     def __init__(self, name: str, software: str, game_version: str, path: Path):
         self.name = name
         self.software = software.lower()
@@ -32,16 +56,18 @@ class Server:
         self.additional_args: list[str] | None = None
 
         self.properties: dict[str, bool | int | str | None] = {}
+        self.online_players: list[str] = []
 
         self.state = ServerState.STOPPED
         self.process: subprocess.Popen | None = None
-        self.log_queue: queue.Queue[str] = queue.Queue()
         self.log_buffer = deque(maxlen=10_000)
         self.stop_event = threading.Event()
         self.lock = threading.RLock()
 
         self._state_callbacks: list[StateCallback] = []
         self._log_callbacks: list[LogCallback] = []
+        self._playerjoined_callbacks: list[PlayerJoinedCallback] = []
+        self._playerleft_callbacks: list[PlayerLeftCallback] = []
 
         self._stop_requested = False
 
@@ -208,8 +234,13 @@ class Server:
         self.process.stdin.write(cmd + "\n")
         self.process.stdin.flush()
 
-    def get_logs(self) -> list[str]:
-        return list(self.log_buffer)
+    def get_logs(self, limit: int = 500) -> list[str]:
+        with self.lock:
+            if limit <= 0:
+                return list(self.log_buffer)
+
+            logs = list(self.log_buffer)
+            return logs[-limit:] if limit < len(logs) else logs
 
     def add_log_callback(self, callback: LogCallback) -> None:
         self._log_callbacks.append(callback)
@@ -217,6 +248,20 @@ class Server:
     def remove_log_callback(self, callback: LogCallback):
         if callback in self._log_callbacks:
             self._log_callbacks.remove(callback)
+
+    def add_playerjoined_callback(self, callback: LogCallback) -> None:
+        self._playerjoined_callbacks.append(callback)
+
+    def remove_playerjoined_callback(self, callback: LogCallback):
+        if callback in self._playerjoined_callbacks:
+            self._playerjoined_callbacks.remove(callback)
+
+    def add_playerleft_callback(self, callback: LogCallback) -> None:
+        self._playerleft_callbacks.append(callback)
+
+    def remove_playerleft_callback(self, callback: LogCallback):
+        if callback in self._playerleft_callbacks:
+            self._playerleft_callbacks.remove(callback)
 
     def _read_logs(self) -> None:
         if self.process is None or self.process.stdout is None:
@@ -228,7 +273,8 @@ class Server:
                     break
 
                 line = raw_line.rstrip("\n")
-                self.log_buffer.append(line)
+                with self.lock:
+                    self.log_buffer.append(line)
 
                 if self.state == ServerState.STARTING and self._is_server_ready(line):
                     logging.info(f"Server {self.name} is ready")
@@ -237,6 +283,9 @@ class Server:
                 if self._is_crash_line(line):
                     logging.warning(f"Crash detected in logs: {line}")
 
+                self._has_player_joined(line)
+                self._has_player_left(line)
+
                 for cb in self._log_callbacks:
                     cb(self, line)
 
@@ -244,6 +293,48 @@ class Server:
             logging.error(f"Error reading logs: {e}")
         finally:
             self._handle_process_exit()
+
+    def _has_player_joined(self, line: str) -> None:
+        indicator = "] logged in with entity id "
+        if indicator not in line:
+            return
+
+        if self._is_imitating(line):
+            return
+
+        player_name = line.split(" ")[3].split("[")[0]
+        legit_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVXYZ_"
+
+        if any(char not in legit_chars for char in player_name):
+            return
+
+        self.online_players.append(player_name)
+
+        for cb in self._playerjoined_callbacks:
+            cb(self, player_name)
+
+        logging.info(f"player joined: {player_name}")
+
+    def _is_imitating(self, line: str) -> bool:
+        return any(online_player in line for online_player in self.online_players)
+
+    def _has_player_left(self, line: str) -> None:
+        indicator = " lost connection: Disconnected"
+        if indicator not in line:
+            return
+
+        player_name = line.split(" ")[3]
+        legit_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVXYZ_"
+
+        if any(char not in legit_chars for char in player_name):
+            return
+
+        self.online_players.remove(player_name)
+
+        for cb in self._playerleft_callbacks:
+            cb(self, player_name)
+
+        logging.info(f"player left: {player_name}")
 
     def _is_server_ready(self, line: str) -> bool:
         ready_indicators = [

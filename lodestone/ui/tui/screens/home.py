@@ -16,6 +16,8 @@ logger = logging.getLogger("lodestone")
 
 
 class DescBlock(VerticalGroup):
+    __slots__ = ("server",)
+
     def __init__(self, server: Server):
         super().__init__()
         self.server = server
@@ -30,6 +32,7 @@ class DescBlock(VerticalGroup):
 
 
 class ServerDisplay(HorizontalGroup):
+    __slots__ = ("server", "server_manager", "index", "start_btn", "stop_btn", "desc")
     state: reactive[ServerState] = reactive(ServerState.STOPPED)
 
     def __init__(self, server: Server, server_manager: ServerManager, index: int):
@@ -96,6 +99,8 @@ class ServerDisplay(HorizontalGroup):
 
 
 class ServerHead(HorizontalGroup):
+    __slots__ = ("server_manager",)
+
     def __init__(self, server_manager: ServerManager):
         super().__init__()
         self.server_manager = server_manager
@@ -109,6 +114,8 @@ class ServerHead(HorizontalGroup):
 
 
 class ServerListing(VerticalScroll):
+    __slots__ = ("server_manager", "displays")
+
     def __init__(self, server_manager: ServerManager):
         super().__init__()
         self.server_manager = server_manager
@@ -138,6 +145,7 @@ class ServerListing(VerticalScroll):
 
 class HomeScreen(Screen):
     CSS_PATH = "../styles/home.tcss"
+    __slots__ = ("server_manager",)
 
     def __init__(self, server_manager: ServerManager):
         super().__init__()
