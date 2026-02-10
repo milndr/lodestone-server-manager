@@ -29,6 +29,7 @@ from textual.widgets import (
     RadioSet,
     RichLog,
     Static,
+    Switch,
     Tab,
     Tabs,
 )
@@ -288,10 +289,40 @@ class ServerScreen(Screen):
                     yield Label("Not implemented yet")
 
                 with Container(id="configs"):
-                    yield Label("Not implemented yet")
-
+                    yield Button("Apply changes", id="apply-button")
+                    with VerticalScroll():
+                        for property in self.server.properties:
+                            with HorizontalGroup(id=property):
+                                yield Label(property, id="property-name")
+                                value = self.server.properties[property]
+                                if isinstance(value, bool):
+                                    yield Right(Switch(value=value, id=property))
+                                elif isinstance(value, str):
+                                    yield Right(
+                                        Input(
+                                            value=value,
+                                            type="text",
+                                            id=property,
+                                        )
+                                    )
+                                else:
+                                    yield Right(
+                                        Input(
+                                            value=str(value),
+                                            type="integer",
+                                            id=property,
+                                        )
+                                    )
                 with Container(id="worlds"):
                     yield Label("Not implemented yet")
+
+    def on_switch_changed(self, event: Switch.Changed):
+        self.server.properties[event.switch.id] = event.value
+        self.query_one("#apply-button", Button).variant = "success"
+
+    def on_input_changed(self, event: Input.Changed):
+        self.server.properties[event.input.id] = event.value
+        self.query_one("#apply-button", Button).variant = "success"
 
     def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
         self.switcher.current = event.tab.id
@@ -311,6 +342,8 @@ class ServerScreen(Screen):
                         self.post_message(ServerDeleted(self.server))
 
                 self.app.push_screen(DeleteScreen(), check_delete)
+        if event.button.id == "apply-button":
+            self.server.dict_to_properties()
 
 
 class HomeScreen(Screen):

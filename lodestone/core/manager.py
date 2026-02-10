@@ -109,8 +109,26 @@ class ServerManager:
             rmtree(server_path)
 
         (server_path / "server.properties").write_text(
-            "# Managed by Lodestone-server-manager"
+            "# Managed by Lodestone-server-manager\n"
+            "level-name=world\n"
+            "level-seed=\n"
+            "allow-nether=true\n"
+            "view-distance=10\n"
+            "spawn-monsters=true\n"
+            "spawn-animals=true\n"
+            "spawn-npcs=true\n"
+            "max-players=20\n"
+            "online-mode=true\n"
+            "pvp=true\n"
+            "server-ip=\n"
+            "server-port=25565\n"
+            "allow-flight=false\n"
+            "white-list=false\n"
+            "difficulty=1\n"
+            "gamemode=survival\n"
         )
+
+        self.servers[name].properties_to_dict()
 
         return server
 

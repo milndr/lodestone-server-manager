@@ -172,3 +172,25 @@ Tab {
     dock: right;
     margin-right: 1;
 }
+
+#property-name {
+    margin-top: 1;
+}
+
+#configs > VerticalScroll {
+    padding-bottom: 8;
+}
+
+#configs > VerticalScroll > HorizontalGroup {
+    border: round grey; 
+    width: 40%;
+}
+
+#configs > VerticalScroll > HorizontalGroup > Right > Switch {
+  width: auto;
+}
+
+#configs > VerticalScroll > HorizontalGroup > Right > Input {
+    min-width: 8;
+    max-width: 24;
+}
