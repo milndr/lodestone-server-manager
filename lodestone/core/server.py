@@ -114,7 +114,13 @@ class Server:
         for cb in self._state_callbacks:
             cb(self, new_state)
 
-    def update_property(self, key: str, value_str: str):
+    def change_property_dict(self, key: str, value: str | int | bool):
+        if key not in self.properties:
+            raise KeyError(f"{key} does not exist")
+
+        self.properties[key] = value
+
+    def change_property_str(self, key: str, value_str: str):
         if key not in self.properties:
             raise KeyError(f"{key} does not exist")
 

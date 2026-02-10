@@ -1,0 +1,39 @@
+ServerWizard {
+    align: center middle;
+    background: $background;
+}
+
+#wizard > Container {
+  height: auto;
+}
+
+#wizard {
+    width: 60;
+    border: round rgba(179, 179, 255, 1);
+    border-title-align: center;
+    background: $surface;
+    padding: 1 2;
+}
+
+#wizard Static {
+    text-align: center;
+    width: 100%;
+}
+
+#wizard Input {
+    margin: 1 0;
+}
+
+#wizard Button {
+    width: 100%;
+}
+
+#wizard RadioSet {
+    margin: 1 0;
+}
+
+#cancel-button {
+    dock: top;
+    width: auto;
+    margin: 1;
+}

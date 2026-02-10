@@ -1,0 +1,52 @@
+ServerListing {
+    align: center middle;
+}
+
+ServerDisplay {
+    height: 5;
+    border: round rgba(179, 179, 255, 1);
+    max-width: 80;
+}
+
+ServerHead {
+    height: 5;
+    border: blank;
+    max-width: 80;
+}
+
+Digits {
+    dock: left;
+    align: left middle;
+    width: auto;
+    margin: 0 3 0 2
+}
+
+DescBlock {
+    width: auto;
+}
+
+#state.running { color: lime; }
+#state.starting { color: yellow; }
+#state.stopping { color: yellow; }
+#state.stopped { color: grey; }
+#state.crashed { color: crimson; }
+
+#listing-action-buttons {
+    padding: 0 0 0 0;
+    margin: 0 0 0 0;
+    outline: blank;
+}
+
+#select {
+    margin-right: 1;
+    margin-left: 1;
+}
+
+#start, #stop {
+    width: auto;
+}
+
+#create {
+    dock: right;
+    margin-right: 1;
+}

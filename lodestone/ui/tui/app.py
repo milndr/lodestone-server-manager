@@ -1,45 +1,15 @@
-import contextlib
 import logging
 from pathlib import Path
 
-from textual import work
 from textual.app import App, ComposeResult
-from textual.containers import (
-    Container,
-    Grid,
-    HorizontalGroup,
-    Right,
-    VerticalGroup,
-    VerticalScroll,
-)
-from textual.message import Message
-from textual.reactive import reactive
-from textual.screen import ModalScreen, Screen
-from textual.widgets import (
-    Button,
-    ContentSwitcher,
-    Digits,
-    Footer,
-    Header,
-    Input,
-    Label,
-    ListView,
-    ProgressBar,
-    RadioButton,
-    RadioSet,
-    RichLog,
-    Static,
-    Switch,
-    Tab,
-    Tabs,
-)
+from textual.widgets import Footer, Header
 
-from lodestone.core import providers
 from lodestone.core.manager import ServerManager
-from lodestone.core.server import Server, ServerState
+from lodestone.core.server import ServerState
+from lodestone.ui.tui.messages import ServerCreated, ServerDeleted
+from lodestone.ui.tui.screens.home import HomeScreen, ServerListing
 
-SERVERS_PATH = Path.cwd() / "Servers"
-
+# Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -49,437 +19,17 @@ logging.basicConfig(
     force=True,
 )
 
-logger = logging.getLogger(__name__)
-logger.info("Logging started")
-
-
-class ServerCreated(Message):
-    def __init__(self, server: Server) -> None:
-        super().__init__()
-        self.server = server
-
-
-class ServerDeleted(Message):
-    def __init__(self, server: Server) -> None:
-        super().__init__()
-        self.server = server
-
-
-class ServerWizard(Screen):
-    def __init__(self, server_manager: ServerManager) -> None:
-        super().__init__()
-        self.server_manager = server_manager
-        self.server_name = None
-        self.software = None
-        self.game_version = None
-
-    def compose(self) -> ComposeResult:
-        yield Button("Cancel", id="cancel-button", compact=True)
-        with ContentSwitcher(id="wizard", initial="name-selection") as self.wizard_step:
-            with Container(id="name-selection"):
-                yield Static("Choose a name for your server")
-                yield Input(placeholder="Survival1")
-                yield Label("", id="error-label")
-            with Container(id="software-selection"):
-                yield Static("Choose a server software for your server")
-                with RadioSet(id="chosen_software"):
-                    yield RadioButton("Paper", name="paper")
-                    yield RadioButton("Vanilla", name="vanilla")
-                yield Button("Next", id="next")
-            with Container(id="version-selection"):
-                yield Static("Choose a Minecraft version")
-                yield Input(placeholder="1.12.2")
-                yield Label("", id="error-label2")
-            with Container(id="download-bar"):
-                # FIXME: The pourcentage and the ETA are not displayed
-                yield ProgressBar(id="download-progress")
-
-    @work(thread=True)
-    def install_server(self) -> None:
-        if (
-            self.server_name is None
-            or self.software is None
-            or self.game_version is None
-        ):
-            logger.error("Missing server creation parameters")
-            return
-
-        try:
-            created = self.server_manager.create_server(
-                self.server_name,
-                self.software,
-                self.game_version,
-                self.make_progress,
-                SERVERS_PATH,
-            )
-            created.accept_eula()
-            self.post_message(ServerCreated(created))
-        except Exception as e:
-            logger.error(f"Error creating server: {e}")
-            self.app.notify(f"Error: {e}", severity="error")
-        finally:
-            self.app.call_from_thread(self.app.pop_screen)
-
-    def make_progress(self, downloaded: int, total: int | None) -> None:
-        self.app.call_from_thread(
-            self.query_one("#download-progress", ProgressBar).update,
-            total=total,
-            progress=downloaded,
-        )
-
-    def on_mount(self) -> None:
-        wizard = self.query_one("#wizard")
-        wizard.border_title = "Server Creation"
-
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        if not self.server_name:
-            input_val = event.value.strip()
-            if input_val != "" and input_val not in self.server_manager.names():
-                self.server_name = input_val
-                self.wizard_step.current = "software-selection"
-                logger.info(f"Chosen name : {self.server_name}")
-            else:
-                logger.info("Not valid name")
-                self.query_one("#error-label", Label).update(
-                    "Please choose a valid unique name"
-                )
-        elif not self.game_version:
-            input_val = event.value.strip()
-            if self.software is None:
-                return
-            provider = providers.get_provider(self.software)
-            if provider.version_exists(input_val):
-                self.game_version = input_val
-                self.wizard_step.current = "download-bar"
-                logger.info(f"Chosen version: {self.game_version}")
-                self.install_server()
-            else:
-                self.query_one("#error-label2", Label).update(
-                    "Please choose a valid game version"
-                )
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "next":
-            selected_button = self.query_one(
-                "#chosen_software", RadioSet
-            ).pressed_button
-            if selected_button is not None:
-                self.software = selected_button.name
-                logger.info(f"Chosen software : {self.software}")
-                self.wizard_step.current = "version-selection"
-        elif event.button.id == "cancel-button":
-            self.app.pop_screen()
-            if self.server_name is not None:
-                with contextlib.suppress(RuntimeError):
-                    self.server_manager.delete_server(self.server_name)
-
-
-class ServerOverview(Static):
-    def __init__(self, server: Server):
-        super().__init__()
-        self.server = server
-
-    def compose(self):
-        with Container(id="overview-grid"):
-            with VerticalGroup(id="players-list"):
-                yield ListView(id="player-list-view")
-
-            with VerticalGroup(id="console"):
-                yield RichLog(id="log", wrap=True)
-                yield Input(id="input", placeholder="Enter a command")
-
-            with VerticalGroup(id="actions"):
-                yield Button("Start", id="start", variant="success", compact=True)
-                yield Button("Restart", id="restart", variant="warning", compact=True)
-                yield Button("Stop", id="stop", variant="error", compact=True)
-
-            with VerticalGroup(id="stats"):
-                yield Label("CPU: --")
-                yield Label("RAM: --")
-
-    def on_mount(self) -> None:
-        self.log_widget = self.query_one(RichLog)
-        self.input = self.query_one(Input)
-        console = self.query_one("#console")
-        console.border_title = "Console"
-        actions = self.query_one("#actions")
-        actions.border_title = "Actions"
-        players_list = self.query_one("#players-list")
-        players_list.border_title = "Players"
-        for line in self.server.get_logs():
-            self.log_widget.write(line)
-
-        self.server.add_log_callback(self._on_log)
-
-    def on_unmount(self) -> None:
-        self.server.remove_log_callback(self._on_log)
-
-    def _on_log(self, server: Server, line: str) -> None:
-        if self.is_mounted:
-            self.app.call_from_thread(self.log_widget.write, line)
-
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        cmd = event.value.strip()
-        if cmd:
-            with contextlib.suppress(RuntimeError):
-                self.server.send_command(cmd)
-        event.input.value = ""
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "start":
-            try:
-                self.run_worker(self.server.start, thread=True)
-            except RuntimeError as e:
-                self.app.notify(f"{e}", severity="error")
-        elif event.button.id == "stop":
-            self.run_worker(self.server.stop, thread=True)
-        elif event.button.id == "restart":
-            self.run_worker(self.server.restart, thread=True)
-
-
-class DeleteScreen(ModalScreen[bool]):
-    def compose(self) -> ComposeResult:
-        yield Grid(
-            Label("Are you sure you want to delete this server?", id="question"),
-            Button("Delete", variant="error", id="delete"),
-            Button("Cancel", variant="primary", id="cancel"),
-            id="dialog",
-        )
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "delete":
-            self.dismiss(True)
-        else:
-            self.dismiss(False)
-
-
-class ServerScreen(Screen):
-    def __init__(self, server: Server, server_manager: ServerManager):
-        super().__init__()
-        self.server = server
-        self.server_manager = server_manager
-
-    def compose(self):
-        with VerticalGroup():
-            with HorizontalGroup(id="tab-bar"):
-                yield Button("Home", id="home", flat=True)
-                yield Tabs(
-                    Tab("Overview", id="overview"),
-                    Tab("Players Management", id="players"),
-                    Tab("Server Settings", id="serv-settings"),
-                    Tab("Add-ons", id="add-ons"),
-                    Tab("Configurations", id="configs"),
-                    Tab("Worlds", id="worlds"),
-                    id="tabs",
-                )
-
-            self.switcher = ContentSwitcher(initial="overview")
-            with self.switcher:
-                with Container(id="overview"):
-                    yield ServerOverview(self.server)
-
-                with Container(id="players"):
-                    yield Label("Not implemented yet")
-
-                with Container(id="serv-settings"):
-                    yield Label("Not implemented yet")
-                    yield Button("Delete Server", id="delete-button", variant="error")
-
-                with Container(id="add-ons"):
-                    yield Label("Not implemented yet")
-
-                with Container(id="configs"):
-                    yield Button("Apply changes", id="apply-button")
-                    with VerticalScroll():
-                        for property in self.server.properties:
-                            with HorizontalGroup(id=property):
-                                yield Label(property, id="property-name")
-                                value = self.server.properties[property]
-                                if isinstance(value, bool):
-                                    yield Right(Switch(value=value, id=property))
-                                elif isinstance(value, str):
-                                    yield Right(
-                                        Input(
-                                            value=value,
-                                            type="text",
-                                            id=property,
-                                        )
-                                    )
-                                else:
-                                    yield Right(
-                                        Input(
-                                            value=str(value),
-                                            type="integer",
-                                            id=property,
-                                        )
-                                    )
-                with Container(id="worlds"):
-                    yield Label("Not implemented yet")
-
-    def on_switch_changed(self, event: Switch.Changed):
-        self.server.properties[event.switch.id] = event.value
-        self.query_one("#apply-button", Button).variant = "success"
-
-    def on_input_changed(self, event: Input.Changed):
-        self.server.properties[event.input.id] = event.value
-        self.query_one("#apply-button", Button).variant = "success"
-
-    def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
-        self.switcher.current = event.tab.id
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "home":
-            self.app.pop_screen()
-        if event.button.id == "delete-button":
-            if self.server.state in (ServerState.RUNNING, ServerState.STARTING):
-                self.app.notify("Stop the server first", severity="information")
-            else:
-
-                def check_delete(delete: bool | None) -> None:
-                    if delete:
-                        self.server_manager.delete_server(self.server.name)
-                        self.app.pop_screen()
-                        self.post_message(ServerDeleted(self.server))
-
-                self.app.push_screen(DeleteScreen(), check_delete)
-        if event.button.id == "apply-button":
-            self.server.dict_to_properties()
-
-
-class HomeScreen(Screen):
-    def __init__(self, server_manager: ServerManager):
-        super().__init__()
-        self.server_manager = server_manager
-
-    def compose(self):
-        yield ServerListing(self.server_manager)
-
-
-class DescBlock(VerticalGroup):
-    def __init__(self, server: Server):
-        super().__init__()
-        self.server = server
-
-    def compose(self):
-        yield Label(f"[bold]{self.server.name}[/bold]", id="name")
-        yield Label(
-            f"{self.server.software.capitalize()} {self.server.game_version}",
-            id="software",
-        )
-        yield Label(self.server.state.value, id="state")
-
-
-class ServerDisplay(HorizontalGroup):
-    state: reactive[ServerState] = reactive(ServerState.STOPPED)
-
-    def __init__(self, server: Server, server_manager: ServerManager, index: int):
-        super().__init__()
-        self.server = server
-        self.server_manager = server_manager
-        self.index = index
-        self.start_btn = Button("Start", variant="success", id="start")
-        self.stop_btn = Button("Stop", variant="error", id="stop")
-
-    def compose(self):
-        yield Digits(str(self.index))
-        self.desc = DescBlock(self.server)
-        yield self.desc
-
-        with VerticalGroup(id="listing-action-buttons"):
-            yield Right(self.start_btn, self.stop_btn)
-
-        yield Button("Select", id="select")
-
-    def on_mount(self) -> None:
-        self.server.add_state_callback(self._on_state_change)
-        self._update_buttons(self.server.state)
-
-    def on_unmount(self) -> None:
-        self.server.remove_state_callback(self._on_state_change)
-
-    def _on_state_change(self, server: Server, state: ServerState) -> None:
-        self.app.call_from_thread(self._set_state, state)
-
-    def _set_state(self, state: ServerState) -> None:
-        self.state = state
-        self._update_buttons(state)
-
-    def _update_buttons(self, state: ServerState) -> None:
-        state_label = self.desc.query_one("#state", Label)
-
-        state_label.remove_class(
-            "stopped", "starting", "running", "stopping", "crashed"
-        )
-        state_label.add_class(state.value.lower())
-        state_label.update(state.value)
-
-        self.start_btn.display = state in {
-            ServerState.STOPPED,
-            ServerState.CRASHED,
-            ServerState.STOPPING,
-        }
-        self.stop_btn.display = state in {ServerState.RUNNING, ServerState.STARTING}
-
-        self.start_btn.disabled = state not in (
-            ServerState.STOPPED,
-            ServerState.CRASHED,
-        )
-        self.stop_btn.disabled = state != ServerState.RUNNING
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "start":
-            self.run_worker(self.server.start, thread=True)
-        elif event.button.id == "stop":
-            self.run_worker(self.server.stop, thread=True)
-        elif event.button.id == "select":
-            self.app.push_screen(ServerScreen(self.server, self.server_manager))
-
-
-class ServerHead(HorizontalGroup):
-    def __init__(self, server_manager: ServerManager):
-        super().__init__()
-        self.server_manager = server_manager
-
-    def compose(self):
-        yield Button("Create", variant="success", id="create")
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "create":
-            self.app.push_screen(ServerWizard(self.server_manager))
-
-
-class ServerListing(VerticalScroll):
-    def __init__(self, server_manager: ServerManager):
-        super().__init__()
-        self.server_manager = server_manager
-        self.displays = {}
-
-    def compose(self) -> ComposeResult:
-        yield ServerHead(self.server_manager)
-
-        for index, server in enumerate(self.server_manager, start=1):
-            display_instance = ServerDisplay(server, self.server_manager, index)
-            self.displays[server.name] = display_instance
-            yield display_instance
-
-    def on_server_created(self, event: ServerCreated) -> None:
-        new_index = len(self.server_manager)
-        display_instance = ServerDisplay(event.server, self.server_manager, new_index)
-        self.displays[event.server.name] = display_instance
-        self.mount(display_instance)
-
-    def on_server_deleted(self, event: ServerDeleted) -> None:
-        try:
-            display = self.displays.pop(event.server.name)
-            display.remove()
-        except KeyError:
-            logger.warning(f"Could not find display for server {event.server.name}")
+logger = logging.getLogger("lodestone")
 
 
 class Lodestone(App):
-    CSS_PATH = "style.tcss"
+    HORIZONTAL_BREAKPOINTS = [
+        (0, "-narrow"),
+        (40, "-normal"),
+        (80, "-wide"),
+        (120, "-very-wide"),
+    ]
     BINDINGS = [("d", "toggle_dark", "Toggle dark mode")]
-    # SCREENS = {"home_screen": HomeScreen}
 
     def __init__(self):
         super().__init__()
@@ -487,7 +37,6 @@ class Lodestone(App):
         self.server_manager = ServerManager(self.SERVERS_PATH)
 
     def compose(self) -> ComposeResult:
-        """Create child widgets for the app."""
         yield Header()
         yield Footer()
 
@@ -516,7 +65,10 @@ class Lodestone(App):
                 logging.info("Stopped %s", s.name)
 
     def action_toggle_dark(self) -> None:
-        """An action to toggle dark mode."""
         self.theme = (
             "textual-dark" if self.theme == "textual-light" else "textual-light"
         )
+
+
+if __name__ == "__main__":
+    Lodestone().run()
