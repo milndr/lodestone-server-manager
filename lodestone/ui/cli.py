@@ -1,6 +1,5 @@
 import cmd
 import logging
-import time
 from pathlib import Path
 
 from rich import print
@@ -12,7 +11,7 @@ from rich.table import Table
 
 from lodestone.core import providers
 from lodestone.core.manager import ServerManager
-from lodestone.core.server import ServerState
+from lodestone.core.server import Server, ServerState
 
 HEADERS = {"User-Agent": "lodestone-server-manager/0.0.1"}
 SERVERS_PATH = Path.cwd() / "Servers"
@@ -81,9 +80,10 @@ class Repl(cmd.Cmd):
         table.add_column("Path")
 
         for s in self.server_manager.values():
+            software_color = software_colors.get(s.software, "white")
             table.add_row(
                 s.name,
-                f"[{software_colors[s.software]}]{s.software.capitalize()}",
+                f"[{software_color}]{s.software.capitalize()}",
                 s.game_version,
                 f"[{state_colors[s.state]}]{s.state.value}",
                 str(s.path),
@@ -101,6 +101,7 @@ class Repl(cmd.Cmd):
             return
 
         if name in self.server_manager.names():
+            print(f"[yellow]Server {name} already exists")
             return
 
         download_progress = self.rich_progress(f"{name} server.jar")
@@ -196,54 +197,41 @@ class Repl(cmd.Cmd):
             print(f"[yellow]{e}")
 
     def do_console(self, arg: str):
-        # if not self.is_running():
-        #     raise RuntimeError("Server is not running!")
-
         if arg not in self.server_manager.names():
             print(f"[yellow]No server with name {arg}")
             return
 
         server = self.server_manager[arg]
 
+        print(f"[green]Attached to console of server {arg}. Type 'exit' to detach.")
+
+        history = server.get_logs(limit=20)
+        for line in history:
+            print(line)
+
+        def print_log(s: Server, line: str) -> None:
+            print(line)
+
+        server.add_log_callback(print_log)
+
         try:
-            while server.state == ServerState.RUNNING:
-                while not server.log_queue.empty():
-                    print(server.log_queue.get())
-                time.sleep(0.05)
+            while True:
+                cmd = input()
 
-                cmd = input(f"{server.name} (CTRL + D to quit) > ").strip()
-                if not cmd:
-                    continue
+                if cmd.strip().lower() == "exit":
+                    break
 
-                server.send_command(cmd)
+                if cmd.strip():
+                    if server.state == ServerState.RUNNING:
+                        server.send_command(cmd)
+                    else:
+                        print("[red]Server is not running.")
 
-        except EOFError:
-            print("Leaving console (server still running)")
-
-        # self.stop_event.clear()
-        # threading.Thread(target=self._print_logs, daemon=True).start()
-        # logging.info("Started thread for print_logs")
-
-        # try:
-        #     while True:
-        #         time.sleep(0.05)
-        #         if self.is_running():
-        #             cmd = input(f"{self.name} (CTRL + D to quit) > ").strip()
-        #         else:
-        #             return
-        #         if cmd and self.is_running():
-        #             self.send_command(cmd)
-        #         # if cmd in ("stop", "restart"):
-        #         #     time.sleep(3)
-        #         #     self.state = ServerState.STOPPED
-        #         #     self.stop_event.set()
-        #         #     logging.info("Stopped threads")
-        #         #     return
-        #         else:
-        #             return
-        # except EOFError:
-        #     self.stop_event.set()
-        #     logging.info("Stopped threads")
+        except (EOFError, KeyboardInterrupt):
+            pass
+        finally:
+            server.remove_log_callback(print_log)
+            print(f"[yellow]Detached from console of server {arg}")
 
     def do_stop(self, arg: str):
         """stop <server>"""
@@ -272,12 +260,18 @@ class Repl(cmd.Cmd):
 
     def do_send(self, arg: str):
         """send <server> <command>"""
-        name, *cmd = arg.split()
+        try:
+            name, *cmd_parts = arg.split()
+            cmd = " ".join(cmd_parts)
+        except ValueError:
+            print("[yellow]Usage: send <server> <command>")
+            return
+
         if name not in self.server_manager.names():
             print(f"[yellow]No server with name {name}")
             return
         try:
-            self.server_manager[name].send_command(" ".join(cmd))
+            self.server_manager[name].send_command(cmd)
         except RuntimeError as e:
             print(f"[yellow]{e}")
 
@@ -299,11 +293,11 @@ class Repl(cmd.Cmd):
         console.print(table)
 
     def do_set_property(self, arg: str):
-        """create <name> <property> <value>"""
+        """set_property <name> <property> <value>"""
         try:
-            name, property, value = arg.split()
+            name, property_key, value = arg.split(maxsplit=2)
         except ValueError:
-            logger.warning("couldn't execute command")
+            print("[yellow]Usage: set_property <name> <property> <value>")
             return
 
         if name not in self.server_manager.names():
@@ -311,12 +305,20 @@ class Repl(cmd.Cmd):
             return
 
         try:
-            self.server_manager[name].update_property(property, value)
-            self.server_manager[name].properties_to_dict()
+            server = self.server_manager[name]
+            server.properties_to_dict()
+
+            server.change_property_str(property_key, value)
+            server.dict_to_properties()
+
+            print(f"[green]Property {property_key} set to {value} for server {name}")
+
         except ValueError as e:
-            print(f"[yellow]{e}")
+            print(f"[yellow]Invalid value: {e}")
         except KeyError as e:
-            print(f"[yellow]{e}")
+            print(f"[yellow]Property not found: {e}")
+        except Exception as e:
+            print(f"[red]Error setting property: {e}")
 
     def do_accept_eula(self, arg: str):
         """accept-eula <server>"""
@@ -333,6 +335,8 @@ class Repl(cmd.Cmd):
             provider.list_versions()
         except ValueError as e:
             print(f"[yellow]{e}")
+        except AttributeError:
+            print(f"[red]Could not list versions for {arg}")
 
     def do_exit(self, _arg: None = None):
         """Exit"""
@@ -341,10 +345,6 @@ class Repl(cmd.Cmd):
                 s.stop()
                 logging.info("Stopped %s", s.name)
         return True
-
-    def do_get(self, _arg: str):
-        print(self.server_manager["1"].properties_to_dict())
-        print()
 
     def do_refresh(self, _arg: None = None):
         """Refresh servers registry"""

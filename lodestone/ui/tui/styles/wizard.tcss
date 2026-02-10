@@ -17,7 +17,6 @@ ServerWizard {
 
 #wizard Static {
     text-align: center;
-    width: 100%;
 }
 
 #wizard Input {
@@ -34,7 +33,6 @@ ServerWizard {
 
 #cancel-button {
     dock: top;
-    align: center middle;
     width: auto;
     margin: 1;
 }

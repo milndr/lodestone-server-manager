@@ -25,8 +25,8 @@ logger = logging.getLogger("lodestone")
 class Lodestone(App):
     HORIZONTAL_BREAKPOINTS = [
         (0, "-narrow"),
-        (40, "-normal"),
-        (80, "-wide"),
+        (60, "-normal"),
+        (85, "-wide"),
         (120, "-very-wide"),
     ]
     BINDINGS = [("d", "toggle_dark", "Toggle dark mode")]

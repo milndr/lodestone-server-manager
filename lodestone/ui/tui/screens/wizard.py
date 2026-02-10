@@ -52,7 +52,9 @@ class ServerWizard(Screen):
                 yield Input(placeholder="1.12.2")
                 yield Label("", id="error-label2")
             with Container(id="download-bar"):
-                yield ProgressBar(id="download-progress")
+                yield ProgressBar(
+                    id="download-progress", show_percentage=True, show_eta=True
+                )
 
     @work(thread=True)
     def install_server(self) -> None:

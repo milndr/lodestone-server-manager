@@ -132,8 +132,8 @@ class ServerListing(VerticalScroll):
     def on_server_created(self, event: ServerCreated) -> None:
         new_index = len(self.server_manager)
         display_instance = ServerDisplay(event.server, self.server_manager, new_index)
-        self.displays[event.server.name] = display_instance
         self.mount(display_instance)
+        self.displays[event.server.name] = display_instance
 
     def on_server_deleted(self, event: ServerDeleted) -> None:
         try:

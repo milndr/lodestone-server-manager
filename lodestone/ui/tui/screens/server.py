@@ -181,7 +181,9 @@ class ServerScreen(Screen):
                     yield Label("Not implemented yet")
 
                 with Container(id="configs"):
-                    yield Button("Apply changes", id="apply-button")
+                    with HorizontalGroup(id="configs-top-bar"):
+                        yield Label("Server Properties")
+                        yield Right(Button("Apply changes", id="apply-button"))
                     with VerticalScroll():
                         yield Grid(id="properties-grid")
                 with Container(id="worlds"):
