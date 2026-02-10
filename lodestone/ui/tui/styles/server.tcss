@@ -19,13 +19,17 @@ Tab {
 
 #console {
     min-width: 64;
-    height: 1fr;
-    width: 1fr;
-    border: round grey;
+    height: 95%;
+    width: auto;
+    border: round $primary;
 }
 
-#input {
-    margin-bottom: 1;
+#log {
+    background: $background;
+}
+
+#player-list-view {
+    background: $background;
 }
 
 DeleteScreen {
@@ -55,7 +59,8 @@ DeleteScreen Button {
 }
 
 #players-list {
-    border: round grey;
+    background: $background;
+    border: round $primary;
     dock: left;
     width: 16;
     height: 8;
@@ -65,15 +70,11 @@ DeleteScreen Button {
     align: center middle;
     dock: right;
     width: auto;
-    border: round grey;
+    border: round $primary;
 }
 
 #tabs {
     margin: 1 1 1 1;
-}
-
-#home {
-    color: black;
 }
 
 #property-name {
@@ -98,8 +99,12 @@ Screen {
     }
 }
 
+Switch.-on > .switch--slider {
+  background: $success-muted;
+}
+
 #configs > VerticalScroll > Grid > HorizontalGroup {
-    border: round grey; 
+    border: round $secondary; 
     width: 1fr;
     height: 100%;
 }

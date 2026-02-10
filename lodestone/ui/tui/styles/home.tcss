@@ -4,7 +4,7 @@ ServerListing {
 
 ServerDisplay {
     height: 5;
-    border: round rgba(179, 179, 255, 1);
+    border: round $primary;
     max-width: 80;
 }
 
@@ -25,11 +25,11 @@ DescBlock {
     width: auto;
 }
 
-#state.running { color: lime; }
-#state.starting { color: yellow; }
-#state.stopping { color: yellow; }
-#state.stopped { color: grey; }
-#state.crashed { color: crimson; }
+#state.running { color: $text-success; }
+#state.starting { color: $text-warning; }
+#state.stopping { color: $text-warning; }
+#state.stopped { color: $text-muted; }
+#state.crashed { color: $text-error; }
 
 #listing-action-buttons {
     padding: 0 0 0 0;

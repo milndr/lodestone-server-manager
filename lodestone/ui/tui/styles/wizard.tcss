@@ -1,17 +1,16 @@
 ServerWizard {
     align: center middle;
-    background: $background;
 }
 
 #wizard > Container {
   height: auto;
+  max-width: 60;
 }
 
 #wizard {
-    width: 60;
-    border: round rgba(179, 179, 255, 1);
+    max-width: 60;
+    border: round $primary;
     border-title-align: center;
-    background: $surface;
     padding: 1 2;
 }
 

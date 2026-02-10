@@ -43,7 +43,7 @@ class ServerOverview(Static):
 
     def compose(self):
         with Container(id="overview-grid"):
-            with VerticalGroup(id="players-list"):
+            with Container(id="players-list"):
                 yield ListView(id="player-list-view")
 
             with VerticalGroup(id="console"):
