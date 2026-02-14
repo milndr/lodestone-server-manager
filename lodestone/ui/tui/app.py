@@ -9,7 +9,6 @@ from lodestone.core.server import ServerState
 from lodestone.ui.tui.messages import ServerCreated, ServerDeleted
 from lodestone.ui.tui.screens.home import HomeScreen, ServerListing
 
-# Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",

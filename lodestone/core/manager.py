@@ -84,12 +84,12 @@ class ServerManager:
         progress: ProgressCb,
         servers_path: Path,
     ) -> Server:
-        server_path = servers_path / name
-        server_path.mkdir(parents=True, exist_ok=True)
+        created_path = servers_path / name
+        created_path.mkdir(parents=True, exist_ok=True)
 
-        server = Server(name, software, game_version, server_path)
+        created = Server(name, software, game_version, created_path)
 
-        self.load_from_server_instance(server)
+        self.load_from_server_instance(created)
 
         manifest = {
             "schema": 1,
@@ -98,19 +98,19 @@ class ServerManager:
             "game_version": game_version,
         }
 
-        (server_path / "lodestone-manifest.json").write_text(
+        (created_path / "lodestone-manifest.json").write_text(
             json.dumps(manifest, indent=2), encoding="utf-8"
         )
 
         try:
             provider = providers.get_provider(software)
-            provider.download_jar(game_version, server_path, progress)
+            provider.download_jar(game_version, created_path, progress)
         except ValueError as e:
             raise RuntimeError(f"[yellow]{e}") from e
         except InterruptedError:
-            rmtree(server_path)
+            rmtree(created_path)
 
-        (server_path / "server.properties").write_text(
+        (created_path / "server.properties").write_text(
             "# Managed by Lodestone-server-manager\n"
             "level-name=world\n"
             "level-seed=\n"
@@ -130,9 +130,9 @@ class ServerManager:
             "gamemode=survival\n"
         )
 
-        self.servers[name].properties_to_dict()
+        created.properties = created.properties_to_dict()
 
-        return server
+        return created
 
     def delete_server(self, name: str):
         if name not in self.names():

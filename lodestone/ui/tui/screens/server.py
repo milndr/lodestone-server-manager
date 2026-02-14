@@ -1,7 +1,7 @@
 import contextlib
 import logging
 
-from textual import work
+from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import (
     Container,
@@ -25,6 +25,7 @@ from textual.widgets import (
     Tab,
     Tabs,
 )
+from textual.worker import Worker, WorkerState
 
 from lodestone.core.manager import ServerManager
 from lodestone.core.server import Server, ServerState
@@ -43,7 +44,7 @@ class ServerOverview(Static):
 
     def compose(self):
         with Container(id="overview-grid"):
-            with Container(id="players-list"):
+            with VerticalGroup(id="players-list"):
                 yield ListView(id="player-list-view")
 
             with VerticalGroup(id="console"):
@@ -116,14 +117,20 @@ class ServerOverview(Static):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "start":
-            try:
-                self.run_worker(self.server.start, thread=True)
-            except RuntimeError as e:
-                self.app.notify(f"{e}", severity="error")
+            self.run_worker(self.server.start, thread=True, exit_on_error=False)
         elif event.button.id == "stop":
             self.run_worker(self.server.stop, thread=True)
         elif event.button.id == "restart":
             self.run_worker(self.server.restart, thread=True)
+
+    @on(Worker.StateChanged)
+    def handle_worker_state(self, event: Worker.StateChanged) -> None:
+        worker = event.worker
+
+        if worker.state is WorkerState.ERROR:
+            error = worker.error
+            logging.error(f"Worker error : {error}")
+            self.app.notify(f"{error}", severity="error")
 
 
 class DeleteScreen(ModalScreen[bool]):
@@ -142,6 +149,39 @@ class DeleteScreen(ModalScreen[bool]):
             self.dismiss(False)
 
 
+class ServerPlayerManagement(Static):
+    def __init__(self, server: Server):
+        super().__init__()
+        self.server = server
+
+    def compose(self) -> ComposeResult:
+        with Container():
+            yield Tabs(
+                Tab("Online", id="tab-online"),
+                Tab("Whitelisted", id="tab-whitelisted"),
+                Tab("Operators", id="tab-operators"),
+                Tab("Bans", id="tab-bans"),
+                id="playerman-tabs",
+            )
+        self.serverman_cs = ContentSwitcher(initial="tab-online")
+        with self.serverman_cs:
+            with Container(id="tab-online"):
+                Label("WIP")
+                Button("WIP")
+                Label("WIP")
+                Label("WIP")
+            with VerticalScroll(id="tab-whitelisted"):
+                Label("WIP")
+            with VerticalScroll(id="tab-operators"):
+                Label("WIP")
+            with VerticalScroll(id="tab-bans"):
+                Label("WIP")
+
+    def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
+        if event.tabs.id == "playerman-tabs":
+            self.serverman_cs.current = event.tab.id
+
+
 class ServerScreen(Screen):
     CSS_PATH = "../styles/server.tcss"
     __slots__ = ("server", "server_manager", "switcher")
@@ -152,7 +192,7 @@ class ServerScreen(Screen):
         self.server_manager = server_manager
 
     def compose(self):
-        with VerticalGroup():
+        with Container():
             with HorizontalGroup(id="tab-bar"):
                 yield Button("Home", id="home", flat=True)
                 yield Tabs(
@@ -171,7 +211,7 @@ class ServerScreen(Screen):
                     yield ServerOverview(self.server)
 
                 with Container(id="players"):
-                    yield Label("Not implemented yet")
+                    yield ServerPlayerManagement(self.server)
 
                 with Container(id="serv-settings"):
                     yield Label("Not implemented yet")
@@ -214,17 +254,24 @@ class ServerScreen(Screen):
         await grid.mount_all(widgets)
 
     def on_switch_changed(self, event: Switch.Changed):
+        logging.info(event.switch.id)
         if event.switch.id is not None:
             self.server.change_property_dict(key=event.switch.id, value=event.value)
             self.query_one("#apply-button", Button).variant = "success"
 
     def on_input_changed(self, event: Input.Changed):
-        if event.input.id is not None and event.input.id != "command-input":
+        if (
+            event.input.id is not None
+            and event.input.id != "command-input"
+            and self.switcher.current == "configs"
+        ):
             self.server.change_property_dict(key=event.input.id, value=event.value)
+            logging.info(self.server.properties)
             self.query_one("#apply-button", Button).variant = "success"
 
     def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
-        self.switcher.current = event.tab.id
+        if event.tabs.id == "tabs":
+            self.switcher.current = event.tab.id
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "home":

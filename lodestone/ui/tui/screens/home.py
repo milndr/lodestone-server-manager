@@ -1,10 +1,12 @@
 import logging
 
+from textual import on
 from textual.app import ComposeResult
 from textual.containers import HorizontalGroup, Right, VerticalGroup, VerticalScroll
 from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Button, Digits, Label
+from textual.worker import Worker, WorkerState
 
 from lodestone.core.manager import ServerManager
 from lodestone.core.server import Server, ServerState
@@ -91,11 +93,20 @@ class ServerDisplay(HorizontalGroup):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "start":
-            self.run_worker(self.server.start, thread=True)
+            self.run_worker(self.server.start, thread=True, exit_on_error=False)
         elif event.button.id == "stop":
             self.run_worker(self.server.stop, thread=True)
         elif event.button.id == "select":
             self.app.push_screen(ServerScreen(self.server, self.server_manager))
+
+    @on(Worker.StateChanged)
+    def handle_worker_state(self, event: Worker.StateChanged) -> None:
+        worker = event.worker
+
+        if worker.state is WorkerState.ERROR:
+            error = worker.error
+            logging.error(f"Worker error : {error}")
+            self.app.notify(f"{error}", severity="error")
 
 
 class ServerHead(HorizontalGroup):
