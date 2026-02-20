@@ -53,7 +53,7 @@ class ServerDisplay(HorizontalGroup):
         with VerticalGroup(id="listing-action-buttons"):
             yield Right(self.start_btn, self.stop_btn)
 
-        yield Button("Select", id="select")
+        yield Button("Select", id="select", variant="primary")
 
     def on_mount(self) -> None:
         self.server.add_state_callback(self._on_state_change)
@@ -62,7 +62,7 @@ class ServerDisplay(HorizontalGroup):
     def on_unmount(self) -> None:
         self.server.remove_state_callback(self._on_state_change)
 
-    def _on_state_change(self, server: Server, state: ServerState) -> None:
+    def _on_state_change(self, state: ServerState) -> None:
         self.app.call_from_thread(self._set_state, state)
 
     def _set_state(self, state: ServerState) -> None:

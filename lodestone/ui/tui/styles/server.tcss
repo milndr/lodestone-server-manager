@@ -7,6 +7,14 @@
     align: left middle;
 }
 
+#action-buttons-group {
+    align: right middle;
+}
+
+#top-left-group {
+    padding-right: 4;
+}
+
 Tab {
   padding: 0 5 0 5;
   
@@ -21,6 +29,11 @@ Tab {
     min-width: 64;
     height: 95%;
     width: auto;
+    border: round $primary;
+}
+
+#tab-operators > HorizontalGroup {
+    height: 3;
     border: round $primary;
 }
 
@@ -64,13 +77,6 @@ DeleteScreen Button {
     dock: left;
     width: 16;
     height: 8;
-}
-
-#actions {
-    align: center middle;
-    dock: right;
-    width: auto;
-    border: round $primary;
 }
 
 #tabs {

@@ -4,7 +4,7 @@ ServerListing {
 
 ServerDisplay {
     height: 5;
-    border: round $primary;
+    border: round $secondary;
     max-width: 80;
 }
 

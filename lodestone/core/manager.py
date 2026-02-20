@@ -110,27 +110,26 @@ class ServerManager:
         except InterruptedError:
             rmtree(created_path)
 
-        (created_path / "server.properties").write_text(
-            "# Managed by Lodestone-server-manager\n"
-            "level-name=world\n"
-            "level-seed=\n"
-            "allow-nether=true\n"
-            "view-distance=10\n"
-            "spawn-monsters=true\n"
-            "spawn-animals=true\n"
-            "spawn-npcs=true\n"
-            "max-players=20\n"
-            "online-mode=true\n"
-            "pvp=true\n"
-            "server-ip=\n"
-            "server-port=25565\n"
-            "allow-flight=false\n"
-            "white-list=false\n"
-            "difficulty=1\n"
-            "gamemode=survival\n"
-        )
+        created.properties = {
+            "level-name": "world",
+            "level-seed": "",
+            "allow-nether": True,
+            "view-distance": 10,
+            "spawn-monsters": True,
+            "spawn-animals": True,
+            "spawn-npcs": True,
+            "max-players": 20,
+            "online-mode": True,
+            "pvp": True,
+            "server-ip": "",
+            "server-port": 25565,
+            "allow-flight": False,
+            "white-list": False,
+            "difficulty": 1,
+            "gamemode": "survival",
+        }
 
-        created.properties = created.properties_to_dict()
+        created.dict_to_properties()
 
         return created
 

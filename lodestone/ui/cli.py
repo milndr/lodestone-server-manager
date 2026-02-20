@@ -11,7 +11,7 @@ from rich.table import Table
 
 from lodestone.core import providers
 from lodestone.core.manager import ServerManager
-from lodestone.core.server import Server, ServerState
+from lodestone.core.server import ServerState
 
 HEADERS = {"User-Agent": "lodestone-server-manager/0.0.1"}
 SERVERS_PATH = Path.cwd() / "Servers"
@@ -209,7 +209,7 @@ class Repl(cmd.Cmd):
         for line in history:
             print(line)
 
-        def print_log(s: Server, line: str) -> None:
+        def print_log(line: str) -> None:
             print(line)
 
         server.add_log_callback(print_log)

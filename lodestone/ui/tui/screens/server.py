@@ -11,6 +11,7 @@ from textual.containers import (
     VerticalGroup,
     VerticalScroll,
 )
+from textual.reactive import reactive
 from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Button,
@@ -51,11 +52,6 @@ class ServerOverview(Static):
                 yield RichLog(id="log", wrap=True)
                 yield Input(id="command-input", placeholder="Enter a command")
 
-            with VerticalGroup(id="actions"):
-                yield Button("Start", id="start", variant="success", compact=True)
-                yield Button("Restart", id="restart", variant="warning", compact=True)
-                yield Button("Stop", id="stop", variant="error", compact=True)
-
             with VerticalGroup(id="stats"):
                 yield Label("CPU: --")
                 yield Label("RAM: --")
@@ -66,8 +62,6 @@ class ServerOverview(Static):
         self.input = self.query_one(Input)
         console = self.query_one("#console")
         console.border_title = "Console"
-        actions = self.query_one("#actions")
-        actions.border_title = "Actions"
         players_list = self.query_one("#players-list")
         players_list.border_title = "Players"
         for line in self.server.get_logs(limit=500):
@@ -85,7 +79,7 @@ class ServerOverview(Static):
         self.server.remove_playerjoined_callback(self._on_playerjoin)
         self.server.remove_playerleft_callback(self._on_playerleft)
 
-    def _on_log(self, server: Server, line: str) -> None:
+    def _on_log(self, line: str) -> None:
         if self.is_mounted:
             self.app.call_from_thread(self.log_widget.write, line)
 
@@ -94,7 +88,7 @@ class ServerOverview(Static):
         self.player_items[player_name] = item
         self.online_player_list.append(item)
 
-    def _on_playerjoin(self, server: Server, player_name: str) -> None:
+    def _on_playerjoin(self, player_name: str) -> None:
         if self.is_mounted:
             self.app.call_from_thread(self._add_player, player_name)
 
@@ -104,7 +98,7 @@ class ServerOverview(Static):
             index = self.online_player_list.children.index(item)
             self.online_player_list.pop(index)
 
-    def _on_playerleft(self, server: Server, player_name: str) -> None:
+    def _on_playerleft(self, player_name: str) -> None:
         if self.is_mounted:
             self.app.call_from_thread(self._remove_player, player_name)
 
@@ -114,14 +108,6 @@ class ServerOverview(Static):
             with contextlib.suppress(RuntimeError):
                 self.server.send_command(cmd)
         event.input.value = ""
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "start":
-            self.run_worker(self.server.start, thread=True, exit_on_error=False)
-        elif event.button.id == "stop":
-            self.run_worker(self.server.stop, thread=True)
-        elif event.button.id == "restart":
-            self.run_worker(self.server.restart, thread=True)
 
     @on(Worker.StateChanged)
     def handle_worker_state(self, event: Worker.StateChanged) -> None:
@@ -166,16 +152,19 @@ class ServerPlayerManagement(Static):
         self.serverman_cs = ContentSwitcher(initial="tab-online")
         with self.serverman_cs:
             with Container(id="tab-online"):
-                Label("WIP")
-                Button("WIP")
-                Label("WIP")
-                Label("WIP")
+                yield Label("WIP")
             with VerticalScroll(id="tab-whitelisted"):
-                Label("WIP")
+                yield Label("WIP")
             with VerticalScroll(id="tab-operators"):
-                Label("WIP")
+                for opped_player in self.server.get_opped_players_dict():
+                    opped_player_name = opped_player["name"]
+                    with HorizontalGroup(id=opped_player_name):
+                        yield Label(opped_player_name)
+                        yield Right(
+                            Button("Remove OP", variant="primary", compact=True)
+                        )
             with VerticalScroll(id="tab-bans"):
-                Label("WIP")
+                yield Label("WIP")
 
     def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
         if event.tabs.id == "playerman-tabs":
@@ -185,14 +174,63 @@ class ServerPlayerManagement(Static):
 class ServerScreen(Screen):
     CSS_PATH = "../styles/server.tcss"
     __slots__ = ("server", "server_manager", "switcher")
+    state: reactive[ServerState] = reactive(ServerState.STOPPED)
 
     def __init__(self, server: Server, server_manager: ServerManager):
         super().__init__()
         self.server = server
         self.server_manager = server_manager
 
+    def _on_state_change(self, state: ServerState) -> None:
+        self.app.call_from_thread(self._set_state, state)
+
+    def _set_state(self, state: ServerState) -> None:
+        self.state = state
+        self._update_ui(state)
+
+    def _update_ui(self, state: ServerState) -> None:
+        try:
+            state_label = self.query_one("#state", Label)
+            start_btn = self.query_one("#start", Button)
+            stop_btn = self.query_one("#stop", Button)
+            restart_btn = self.query_one("#restart", Button)
+        except Exception:
+            return
+
+        state_label.remove_class(
+            "stopped", "starting", "running", "stopping", "crashed"
+        )
+        state_label.add_class(state.value.lower())
+        state_label.update(state.value)
+
+        start_btn.display = state in {
+            ServerState.STOPPED,
+            ServerState.CRASHED,
+            ServerState.STOPPING,
+        }
+        start_btn.disabled = state not in (
+            ServerState.STOPPED,
+            ServerState.CRASHED,
+        )
+
+        stop_btn.display = state in {ServerState.RUNNING, ServerState.STARTING}
+        stop_btn.disabled = state != ServerState.RUNNING
+
+        restart_btn.display = state in {ServerState.RUNNING}
+        restart_btn.disabled = state != ServerState.RUNNING
+
     def compose(self):
         with Container():
+            with HorizontalGroup(id="top-bar"):
+                with HorizontalGroup(id="top-left-group"):
+                    yield Label(self.server.name)
+                    yield Label(self.server.state.value, id="state")
+                with HorizontalGroup(id="action-buttons-group"):
+                    yield Button("Start", id="start", variant="success", compact=True)
+                    yield Button(
+                        "Restart", id="restart", variant="warning", compact=True
+                    )
+                    yield Button("Stop", id="stop", variant="error", compact=True)
             with HorizontalGroup(id="tab-bar"):
                 yield Button("Home", id="home", flat=True)
                 yield Tabs(
@@ -230,7 +268,12 @@ class ServerScreen(Screen):
                     yield Label("Not implemented yet")
 
     def on_mount(self) -> None:
+        self.server.add_state_callback(self._on_state_change)
+        self._update_ui(self.server.state)
         self.load_properties()
+
+    def on_unmount(self) -> None:
+        self.server.remove_state_callback(self._on_state_change)
 
     @work(exclusive=True)
     async def load_properties(self) -> None:
@@ -290,3 +333,9 @@ class ServerScreen(Screen):
                 self.app.push_screen(DeleteScreen(), check_delete)
         if event.button.id == "apply-button":
             self.server.dict_to_properties()
+        if event.button.id == "start":
+            self.run_worker(self.server.start, thread=True, exit_on_error=False)
+        elif event.button.id == "stop":
+            self.run_worker(self.server.stop, thread=True)
+        elif event.button.id == "restart":
+            self.run_worker(self.server.restart, thread=True)

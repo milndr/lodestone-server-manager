@@ -1,3 +1,4 @@
+import json
 import logging
 import subprocess
 import threading
@@ -15,10 +16,10 @@ class ServerState(Enum):
     CRASHED = "CRASHED"
 
 
-StateCallback = Callable[["Server", ServerState], None]
-LogCallback = Callable[["Server", str], None]
-PlayerJoinedCallback = Callable[["Server", str], None]
-PlayerLeftCallback = Callable[["Server", str], None]
+StateCallback = Callable[[ServerState], None]
+LogCallback = Callable[[str], None]
+PlayerJoinedCallback = Callable[[str], None]
+PlayerLeftCallback = Callable[[str], None]
 
 
 class Server:
@@ -123,6 +124,15 @@ class Server:
 
                 file.write(f"{key}={value_str}\n")
 
+    def get_opped_players_dict(self):
+        opped_json_path = self.path / "ops.json"
+
+        try:
+            with opped_json_path.open("r", encoding="utf-8") as file:
+                return json.load(file)
+        except (json.JSONDecodeError, FileNotFoundError):
+            return {}
+
     def add_state_callback(self, callback: StateCallback) -> None:
         self._state_callbacks.append(callback)
 
@@ -138,7 +148,7 @@ class Server:
             self.state = new_state
 
         for cb in self._state_callbacks:
-            cb(self, new_state)
+            cb(new_state)
 
     def change_property_dict(self, key: str, value: str | int | bool):
         if key not in self.properties:
@@ -287,7 +297,7 @@ class Server:
                 self._has_player_left(line)
 
                 for cb in self._log_callbacks:
-                    cb(self, line)
+                    cb(line)
 
         except Exception as e:
             logging.error(f"Error reading logs: {e}")
@@ -311,7 +321,7 @@ class Server:
         self.online_players.append(player_name)
 
         for cb in self._playerjoined_callbacks:
-            cb(self, player_name)
+            cb(player_name)
 
         logging.info(f"player joined: {player_name}")
 
@@ -332,7 +342,7 @@ class Server:
         self.online_players.remove(player_name)
 
         for cb in self._playerleft_callbacks:
-            cb(self, player_name)
+            cb(player_name)
 
         logging.info(f"player left: {player_name}")
 
