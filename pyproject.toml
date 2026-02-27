@@ -5,6 +5,7 @@ description = "Manage your Minecraft servers in the terminal."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "platformdirs>=4.5.1",
     "requests>=2.32.5",
     "rich>=14.3.2",
     "textual>=7.5.0",
