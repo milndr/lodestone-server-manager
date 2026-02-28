@@ -1,5 +1,3 @@
-import logging
-
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -19,8 +17,9 @@ from lodestone.core import providers
 from lodestone.core.manager import ServerManager
 from lodestone.settings import SERVERS_PATH
 from lodestone.ui.tui.messages import ServerCreated
+from lodestone.utils.log import get_logger
 
-logger = logging.getLogger("lodestone")
+logger = get_logger("lodestone")
 
 
 class ServerWizard(Screen):
@@ -76,7 +75,7 @@ class ServerWizard(Screen):
             created.accept_eula()
             self.post_message(ServerCreated(created))
         except Exception as e:
-            logger.error(f"Error creating server: {e}")
+            logger.exception(lambda: "Error creating server")
             self.app.notify(f"Error: {e}", severity="error")
         finally:
             self.app.call_from_thread(self.app.pop_screen)
@@ -98,7 +97,7 @@ class ServerWizard(Screen):
             if input_val != "" and input_val not in self.server_manager.names():
                 self.server_name = input_val
                 self.wizard_step.current = "software-selection"
-                logger.info(f"Chosen name : {self.server_name}")
+                logger.info(lambda: f"Chosen name : {self.server_name}")
             else:
                 logger.info("Not valid name")
                 self.query_one("#error-label", Label).update(
@@ -112,7 +111,7 @@ class ServerWizard(Screen):
             if provider.version_exists(input_val):
                 self.game_version = input_val
                 self.wizard_step.current = "download-bar"
-                logger.info(f"Chosen version: {self.game_version}")
+                logger.info(lambda: f"Chosen version: {self.game_version}")
                 self.install_server()
             else:
                 self.query_one("#error-label2", Label).update(
@@ -126,7 +125,7 @@ class ServerWizard(Screen):
             ).pressed_button
             if selected_button is not None:
                 self.software = selected_button.name
-                logger.info(f"Chosen software : {self.software}")
+                logger.info(lambda: f"Chosen software : {self.software}")
                 self.wizard_step.current = "version-selection"
         elif event.button.id == "cancel-button":
             self.app.pop_screen()

@@ -5,10 +5,10 @@ description = "Manage your Minecraft servers in the terminal."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "platformdirs>=4.5.1",
-    "requests>=2.32.5",
-    "rich>=14.3.2",
-    "textual>=7.5.0",
+  "platformdirs>=4.5.1",
+  "requests>=2.32.5",
+  "rich>=14.3.2",
+  "textual>=7.5.0",
 ]
 
 [project.urls]
@@ -28,11 +28,7 @@ build-backend = "hatchling.build"
 packages = ["lodestone"]
 
 [dependency-groups]
-dev = [
-    "pre-commit>=4.5.1",
-    "ruff>=0.11.0",
-    "pyright>=1.1.400",
-]
+dev = ["pre-commit>=4.5.1", "ruff>=0.11.0", "pyright>=1.1.400"]
 
 [tool.ruff.lint]
 # Core rule sets
@@ -43,7 +39,6 @@ select = [
   "B",   # flake8-bugbear
   "C90", # McCabe complexity
   "ANN", # type annotations
-  "T20", # print / debug statements
   "I",   # isort (import sorting)
   "UP",  # pyupgrade
   "PTH", # use pathlib
@@ -85,9 +80,10 @@ ignore = [
 
   # Security (non-crypto context)
   "S311", # random is fine
+  "S603",
 
   # Imports / scripts
-  "E402",   # imports not at top level
+  "E402", # imports not at top level
 ]
 
 [tool.ruff.format]

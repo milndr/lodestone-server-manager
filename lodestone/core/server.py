@@ -1,11 +1,14 @@
 import json
-import logging
 import subprocess
 import threading
 from collections import deque
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
+
+from lodestone.utils.log import get_logger
+
+logger = get_logger(__name__)
 
 
 class ServerState(Enum):
@@ -150,7 +153,7 @@ class Server:
         for cb in self._state_callbacks:
             cb(new_state)
 
-    def change_property_dict(self, key: str, value: str | int | bool):
+    def change_property_dict(self, key: str, *, value: str | int | bool):
         if key not in self.properties:
             raise KeyError(f"{key} does not exist")
 
@@ -287,11 +290,11 @@ class Server:
                     self.log_buffer.append(line)
 
                 if self.state == ServerState.STARTING and self._is_server_ready(line):
-                    logging.info(f"Server {self.name} is ready")
+                    logger.info(lambda: f"Server {self.name} is ready")
                     self._set_state(ServerState.RUNNING)
 
                 if self._is_crash_line(line):
-                    logging.warning(f"Crash detected in logs: {line}")
+                    logger.warning(lambda line=line: f"Crash detected in logs: {line}")
 
                 self._has_player_joined(line)
                 self._has_player_left(line)
@@ -299,8 +302,8 @@ class Server:
                 for cb in self._log_callbacks:
                     cb(line)
 
-        except Exception as e:
-            logging.exception(f"Error reading logs: {e}")
+        except Exception:
+            logger.exception(lambda: "Error reading logs")
         finally:
             self._handle_process_exit()
 
@@ -323,7 +326,7 @@ class Server:
         for cb in self._playerjoined_callbacks:
             cb(player_name)
 
-        logging.info(f"player joined: {player_name}")
+        logger.info(lambda: f"player joined: {player_name}")
 
     def _is_imitating(self, line: str) -> bool:
         return any(online_player in line for online_player in self.online_players)
@@ -344,7 +347,7 @@ class Server:
         for cb in self._playerleft_callbacks:
             cb(player_name)
 
-        logging.info(f"player left: {player_name}")
+        logger.info(lambda: f"player left: {player_name}")
 
     def _is_server_ready(self, line: str) -> bool:
         ready_indicators = [
@@ -377,7 +380,9 @@ class Server:
         if self._stop_requested or return_code == 0:
             self._set_state(ServerState.STOPPED)
         else:
-            logging.error(f"Server {self.name} crashed with exit code {return_code}")
+            logger.error(
+                lambda: f"Server {self.name} crashed with exit code {return_code}"
+            )
             self._set_state(ServerState.CRASHED)
 
         self.process = None
@@ -393,7 +398,7 @@ class Server:
     def restart(self) -> None:
         self.stop(restart=True)
 
-    def stop(self, restart: bool = False) -> None:
+    def stop(self, *, restart: bool = False) -> None:
         if self.state not in (ServerState.STARTING, ServerState.RUNNING):
             if restart:
                 self.start()
@@ -414,12 +419,12 @@ class Server:
             daemon=True,
         ).start()
 
-    def _wait_stop(self, restart: bool) -> None:
+    def _wait_stop(self, *, restart: bool) -> None:
         try:
             if self.process:
                 self.process.wait(timeout=30)
         except subprocess.TimeoutExpired:
-            logging.warning(f"Server {self.name} stop timeout, killing...")
+            logger.warning(lambda: f"Server {self.name} stop timeout, killing...")
             if self.process:
                 self.process.terminate()
                 self.process.wait()
@@ -429,7 +434,7 @@ class Server:
         if hasattr(self, "log_thread") and self.log_thread.is_alive():
             self.log_thread.join(timeout=1)
 
-        logging.info(f"Server {self.name} stopped")
+        logger.info(lambda: f"Server {self.name} stopped")
 
         if restart:
             self.start()
