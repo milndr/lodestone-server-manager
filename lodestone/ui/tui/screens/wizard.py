@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 from textual import work
 from textual.app import ComposeResult
@@ -18,10 +17,10 @@ from textual.widgets import (
 
 from lodestone.core import providers
 from lodestone.core.manager import ServerManager
+from lodestone.settings import SERVERS_PATH
 from lodestone.ui.tui.messages import ServerCreated
 
 logger = logging.getLogger("lodestone")
-SERVERS_PATH = Path.cwd() / "Servers"
 
 
 class ServerWizard(Screen):

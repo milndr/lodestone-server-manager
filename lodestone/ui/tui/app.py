@@ -1,11 +1,11 @@
 import logging
-from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header
 
 from lodestone.core.manager import ServerManager
 from lodestone.core.server import ServerState
+from lodestone.settings import SERVERS_PATH
 from lodestone.ui.tui.messages import ServerCreated, ServerDeleted
 from lodestone.ui.tui.screens.home import HomeScreen, ServerListing
 
@@ -32,7 +32,7 @@ class Lodestone(App):
 
     def __init__(self):
         super().__init__()
-        self.SERVERS_PATH = Path.cwd() / "Servers"
+        self.SERVERS_PATH = SERVERS_PATH
         self.server_manager = ServerManager(self.SERVERS_PATH)
 
     def compose(self) -> ComposeResult:
@@ -48,6 +48,7 @@ class Lodestone(App):
             listing = self.home_screen.query_one(ServerListing)
             listing.on_server_created(event)
         except Exception:
+            logger.warning("Error displaying created server")
             pass
 
     def on_server_deleted(self, event: ServerDeleted) -> None:
@@ -55,6 +56,7 @@ class Lodestone(App):
             listing = self.home_screen.query_one(ServerListing)
             listing.on_server_deleted(event)
         except Exception:
+            logger.warning("Error removing created server")
             pass
 
     def on_unmount(self) -> None:

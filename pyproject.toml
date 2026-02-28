@@ -11,22 +11,27 @@ dependencies = [
     "textual>=7.5.0",
 ]
 
+[project.urls]
+repository = "https://github.com/milndr/lodestone-server-manager"
+
 [project.scripts]
 lodestone = "lodestone.__main__:main"
 
 [tool.uv]
 package = true
 
-[tool.hatch.build.targets.wheel]
-packages = ["lodestone"]
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["lodestone"]
+
 [dependency-groups]
 dev = [
     "pre-commit>=4.5.1",
+    "ruff>=0.11.0",
+    "pyright>=1.1.400",
 ]
 
 [tool.ruff.lint]
@@ -39,12 +44,19 @@ select = [
   "C90", # McCabe complexity
   "ANN", # type annotations
   "T20", # print / debug statements
-  "Q",   # quote consistency
   "I",   # isort (import sorting)
   "UP",  # pyupgrade
   "PTH", # use pathlib
   "SIM", # simplify
   "RET", # return
+  "N",   # naming
+  "S",   # security best practices
+  "TRY", # try/except best practices
+  "G",   # logging
+  "FBT", # boolean trap
+  "A",   # python builtins used as vars or parameters
+  "COM", # missing trailing commas
+  "ARG", # unused arguments
 ]
 
 # Noisy or contextually acceptable rules
@@ -62,6 +74,7 @@ ignore = [
   # Handled by Black/Ruff Format
   "E203",
   "E501",
+  "COM812",
 
   # Pragmatic typing
   "ANN201", # no return type for public funcs
@@ -69,18 +82,19 @@ ignore = [
 
   # Exceptions / debugging
   "TRY003", # short exception messages OK
-  "T201",   # allow print()
 
   # Security (non-crypto context)
   "S311", # random is fine
 
   # Imports / scripts
   "E402",   # imports not at top level
-  "INP001", # implicit namespace packages
 ]
 
+[tool.ruff.format]
+quote-style = "double"
+
 [tool.ruff.lint.mccabe]
-max-complexity = 20
+max-complexity = 15
 
 # Relax rules in tests
 [tool.ruff.lint.per-file-ignores]
