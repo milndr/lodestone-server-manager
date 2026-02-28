@@ -1,5 +1,3 @@
-import logging
-
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import HorizontalGroup, Right, VerticalGroup, VerticalScroll
@@ -13,8 +11,9 @@ from lodestone.core.server import Server, ServerState
 from lodestone.ui.tui.messages import ServerCreated, ServerDeleted
 from lodestone.ui.tui.screens.server import ServerScreen
 from lodestone.ui.tui.screens.wizard import ServerWizard
+from lodestone.utils.log import get_logger
 
-logger = logging.getLogger("lodestone")
+logger = get_logger("lodestone")
 
 
 class DescBlock(VerticalGroup):
@@ -105,7 +104,7 @@ class ServerDisplay(HorizontalGroup):
 
         if worker.state is WorkerState.ERROR:
             error = worker.error
-            logging.error(f"Worker error : {error}")
+            logger.error(lambda: f"Worker error : {error}")
             self.app.notify(f"{error}", severity="error")
 
 
@@ -151,7 +150,9 @@ class ServerListing(VerticalScroll):
             display = self.displays.pop(event.server.name)
             display.remove()
         except KeyError:
-            logger.warning(f"Could not find display for server {event.server.name}")
+            logger.warning(
+                lambda: f"Could not find display for server {event.server.name}"
+            )
 
 
 class HomeScreen(Screen):

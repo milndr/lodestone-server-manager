@@ -8,6 +8,7 @@ from lodestone.core.server import ServerState
 from lodestone.settings import SERVERS_PATH
 from lodestone.ui.tui.messages import ServerCreated, ServerDeleted
 from lodestone.ui.tui.screens.home import HomeScreen, ServerListing
+from lodestone.utils.log import get_logger
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,7 +19,7 @@ logging.basicConfig(
     force=True,
 )
 
-logger = logging.getLogger("lodestone")
+logger = get_logger("lodestone")
 
 
 class Lodestone(App):
@@ -63,7 +64,7 @@ class Lodestone(App):
         for s in self.server_manager.values():
             if s.state == ServerState.RUNNING:
                 s.stop()
-                logging.info("Stopped %s", s.name)
+                logger.info(lambda s=s: f"Stopped {s.name}")
 
     def action_toggle_dark(self) -> None:
         self.theme = (

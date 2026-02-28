@@ -1,11 +1,13 @@
 import json
-import logging
 from collections.abc import Callable
 from pathlib import Path
 from shutil import rmtree
 
 from lodestone.core import providers
 from lodestone.core.server import Server
+from lodestone.utils.log import get_logger
+
+logger = get_logger(__name__)
 
 
 class ServerManager:
@@ -45,12 +47,12 @@ class ServerManager:
 
     def load_from_path(self, directory: Path) -> Server | None:
         if not directory.is_dir():
-            logging.warning("Couldn't find folder")
+            logger.warning("Couldn't find folder")
             return None
 
         manifest = directory / "lodestone-manifest.json"
         if not manifest.exists():
-            logging.warning("Couldn't find manifest")
+            logger.warning("Couldn't find manifest")
             return None
 
         try:
@@ -65,14 +67,14 @@ class ServerManager:
             try:
                 server.properties = server.properties_to_dict()
             except FileNotFoundError as e:
-                logging.warning(e)
+                logger.warning(lambda e=e: f"{e}")
 
             self.load_from_server_instance(server)
-            return server
-
         except (KeyError, json.JSONDecodeError):
-            logging.warning("Couldn't read the manifest")
+            logger.warning("Couldn't read the manifest")
             return None
+        else:
+            return server
 
     ProgressCb = Callable[[int, int | None], None]
 

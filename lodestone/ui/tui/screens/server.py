@@ -1,5 +1,4 @@
 import contextlib
-import logging
 
 from textual import on, work
 from textual.app import ComposeResult
@@ -31,8 +30,9 @@ from textual.worker import Worker, WorkerState
 from lodestone.core.manager import ServerManager
 from lodestone.core.server import Server, ServerState
 from lodestone.ui.tui.messages import ServerDeleted
+from lodestone.utils.log import get_logger
 
-logger = logging.getLogger("lodestone")
+logger = get_logger("lodestone")
 
 
 class ServerOverview(Static):
@@ -115,7 +115,7 @@ class ServerOverview(Static):
 
         if worker.state is WorkerState.ERROR:
             error = worker.error
-            logging.error(f"Worker error : {error}")
+            logger.error(lambda: f"Worker error : {error}")
             self.app.notify(f"{error}", severity="error")
 
 
@@ -130,9 +130,9 @@ class DeleteScreen(ModalScreen[bool]):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "delete":
-            self.dismiss(True)
+            self.dismiss(result=True)
         else:
-            self.dismiss(False)
+            self.dismiss(result=False)
 
 
 class ServerPlayerManagement(Static):
@@ -281,23 +281,21 @@ class ServerScreen(Screen):
         await grid.query("*").remove()
 
         widgets = []
-        for property, value in self.server.properties.items():
+        for prop, value in self.server.properties.items():
             if isinstance(value, bool):
-                control = Right(Switch(value=value, id=property))
+                control = Right(Switch(value=value, id=prop))
             elif isinstance(value, str):
-                control = Right(Input(value=value, type="text", id=property))
+                control = Right(Input(value=value, type="text", id=prop))
             else:
-                control = Right(Input(value=str(value), type="integer", id=property))
+                control = Right(Input(value=str(value), type="integer", id=prop))
 
-            hg = HorizontalGroup(
-                Label(property, id="property-name"), control, id=property
-            )
+            hg = HorizontalGroup(Label(prop, id="property-name"), control, id=prop)
             widgets.append(hg)
 
         await grid.mount_all(widgets)
 
     def on_switch_changed(self, event: Switch.Changed):
-        logging.info(event.switch.id)
+        logger.info(lambda: f"{event.switch.id}")
         if event.switch.id is not None:
             self.server.change_property_dict(key=event.switch.id, value=event.value)
             self.query_one("#apply-button", Button).variant = "success"
@@ -309,7 +307,7 @@ class ServerScreen(Screen):
             and self.switcher.current == "configs"
         ):
             self.server.change_property_dict(key=event.input.id, value=event.value)
-            logging.info(self.server.properties)
+            logger.info(lambda: f"{self.server.properties}")
             self.query_one("#apply-button", Button).variant = "success"
 
     def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
@@ -324,7 +322,7 @@ class ServerScreen(Screen):
                 self.app.notify("Stop the server first", severity="information")
             else:
 
-                def check_delete(delete: bool | None) -> None:
+                def check_delete(delete: bool | None) -> None:  # noqa: FBT001
                     if delete:
                         self.server_manager.delete_server(self.server.name)
                         self.app.pop_screen()

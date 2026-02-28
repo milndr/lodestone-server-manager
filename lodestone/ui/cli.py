@@ -1,7 +1,7 @@
 import cmd
 import logging
 
-from rich import print
+from rich import print as rprint
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.progress import Progress
@@ -12,6 +12,7 @@ from lodestone.core import providers
 from lodestone.core.manager import ServerManager
 from lodestone.core.server import ServerState
 from lodestone.settings import SERVERS_PATH
+from lodestone.utils.log import get_logger
 
 HEADERS = {"User-Agent": "lodestone-server-manager/0.0.1"}
 
@@ -22,7 +23,7 @@ logging.basicConfig(
     handlers=[RichHandler(rich_tracebacks=True)],
     force=True,
 )
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 logger.info("logging initialized")
 
 
@@ -100,7 +101,7 @@ class Repl(cmd.Cmd):
             return
 
         if name in self.server_manager.names():
-            print(f"[yellow]Server {name} already exists")
+            rprint(f"[yellow]Server {name} already exists")
             return
 
         download_progress = self.rich_progress(f"{name} server.jar")
@@ -117,29 +118,29 @@ class Repl(cmd.Cmd):
         game_version = None
 
         while True:
-            print(
+            rprint(
                 "[dark_slate_gray1]Choose a name for you server.\n[cornflower_blue]Wizard [white]> ",
                 end="",
             )
             name = input().strip()
             if name == "":
-                print("[yellow]Please choose a valid name")
+                rprint("[yellow]Please choose a valid name")
             elif name in self.server_manager.names():
-                print("[yellow]Another server already has that name")
+                rprint("[yellow]Another server already has that name")
             else:
                 break
         while True:
-            print(
+            rprint(
                 "[dark_slate_gray1]Choose a software for you server (vanilla, paper)\n[cornflower_blue]Wizard [white]> ",
                 end="",
             )
             software = input().strip()
             if software == "" or software.lower() not in ("vanilla", "paper"):
-                print("[yellow]Please choose a valid server software (vanilla, paper)")
+                rprint("[yellow]Please choose a valid server software (vanilla, paper)")
             else:
                 break
         while True:
-            print(
+            rprint(
                 '[dark_slate_gray1]Choose a Minecraft version for you server, type "list" for available versions for selected software\n[cornflower_blue]Wizard [white]> ',
                 end="",
             )
@@ -149,7 +150,7 @@ class Repl(cmd.Cmd):
                 continue
             provider = providers.get_provider(software)
             if game_version == "" or not provider.version_exists(game_version):
-                print("[yellow]Please choose a valid minecraft version.")
+                rprint("[yellow]Please choose a valid minecraft version.")
             else:
                 break
 
@@ -160,7 +161,7 @@ class Repl(cmd.Cmd):
         )
 
         while True:
-            print(
+            rprint(
                 "[dark_slate_gray1]Do you agree with the EULA ? [green]y[bright_white]/[red]n [white](it is needed to play)\n[cornflower_blue]Wizard [white]> ",
                 end="",
             )
@@ -170,9 +171,9 @@ class Repl(cmd.Cmd):
                 break
             if choise == "n":
                 return
-            print("[yellow]Please choose a valid choise.")
+            rprint("[yellow]Please choose a valid choise.")
         while True:
-            print(
+            rprint(
                 "[dark_slate_gray1]Do you want to start your server ? [green]y[bright_white]/[red]n [white]\n[cornflower_blue]Wizard [white]> ",
                 end="",
             )
@@ -182,27 +183,27 @@ class Repl(cmd.Cmd):
                 break
             if choise == "n":
                 return
-            print("[yellow]Please choose a valid choise.")
+            rprint("[yellow]Please choose a valid choise.")
 
     def do_start(self, arg: str):
         """start <server>"""
         if arg not in self.server_manager.names():
-            print(f"[yellow]No server with name {arg}")
+            rprint(f"[yellow]No server with name {arg}")
             return
         try:
             self.server_manager[arg].start()
             self.do_list(arg)
         except RuntimeError as e:
-            print(f"[yellow]{e}")
+            rprint(f"[yellow]{e}")
 
     def do_console(self, arg: str):
         if arg not in self.server_manager.names():
-            print(f"[yellow]No server with name {arg}")
+            rprint(f"[yellow]No server with name {arg}")
             return
 
         server = self.server_manager[arg]
 
-        print(f"[green]Attached to console of server {arg}. Type 'exit' to detach.")
+        rprint(f"[green]Attached to console of server {arg}. Type 'exit' to detach.")
 
         history = server.get_logs(limit=20)
         for line in history:
@@ -224,27 +225,27 @@ class Repl(cmd.Cmd):
                     if server.state == ServerState.RUNNING:
                         server.send_command(cmd)
                     else:
-                        print("[red]Server is not running.")
+                        rprint("[red]Server is not running.")
 
         except (EOFError, KeyboardInterrupt):
             pass
         finally:
             server.remove_log_callback(print_log)
-            print(f"[yellow]Detached from console of server {arg}")
+            rprint(f"[yellow]Detached from console of server {arg}")
 
     def do_stop(self, arg: str):
         """stop <server>"""
         if arg not in self.server_manager.names():
-            print(f"[yellow]No server with name {arg}")
+            rprint(f"[yellow]No server with name {arg}")
             return
         try:
             self.server_manager[arg].stop()
         except RuntimeError as e:
-            print(f"[yellow]{e}")
+            rprint(f"[yellow]{e}")
 
     def do_delete(self, arg: str):
         if arg not in self.server_manager.names():
-            print(f"[yellow]No server with name {arg}")
+            rprint(f"[yellow]No server with name {arg}")
             return
         while True:
             choise = Prompt.ask(
@@ -255,7 +256,7 @@ class Repl(cmd.Cmd):
                 return
             if choise == "n":
                 return
-            print("[yellow]Please enter a valid answer (y/n).")
+            rprint("[yellow]Please enter a valid answer (y/n).")
 
     def do_send(self, arg: str):
         """send <server> <command>"""
@@ -263,20 +264,20 @@ class Repl(cmd.Cmd):
             name, *cmd_parts = arg.split()
             cmd = " ".join(cmd_parts)
         except ValueError:
-            print("[yellow]Usage: send <server> <command>")
+            rprint("[yellow]Usage: send <server> <command>")
             return
 
         if name not in self.server_manager.names():
-            print(f"[yellow]No server with name {name}")
+            rprint(f"[yellow]No server with name {name}")
             return
         try:
             self.server_manager[name].send_command(cmd)
         except RuntimeError as e:
-            print(f"[yellow]{e}")
+            rprint(f"[yellow]{e}")
 
     def do_list_properties(self, arg: str):
         if arg not in self.server_manager.names():
-            print(f"[yellow]No server with name {arg}")
+            rprint(f"[yellow]No server with name {arg}")
             return
 
         table = Table(title=f"{arg} Properties")
@@ -296,11 +297,11 @@ class Repl(cmd.Cmd):
         try:
             name, property_key, value = arg.split(maxsplit=2)
         except ValueError:
-            print("[yellow]Usage: set_property <name> <property> <value>")
+            rprint("[yellow]Usage: set_property <name> <property> <value>")
             return
 
         if name not in self.server_manager.names():
-            print(f"[yellow]No server with name {name}")
+            rprint(f"[yellow]No server with name {name}")
             return
 
         try:
@@ -310,22 +311,22 @@ class Repl(cmd.Cmd):
             server.change_property_str(property_key, value)
             server.dict_to_properties()
 
-            print(f"[green]Property {property_key} set to {value} for server {name}")
+            rprint(f"[green]Property {property_key} set to {value} for server {name}")
 
         except ValueError as e:
-            print(f"[yellow]Invalid value: {e}")
+            rprint(f"[yellow]Invalid value: {e}")
         except KeyError as e:
-            print(f"[yellow]Property not found: {e}")
+            rprint(f"[yellow]Property not found: {e}")
         except Exception as e:
-            print(f"[red]Error setting property: {e}")
+            rprint(f"[red]Error setting property: {e}")
 
     def do_accept_eula(self, arg: str):
         """accept-eula <server>"""
         if arg not in self.server_manager.names():
-            print(f"[yellow]No server with name {arg}")
+            rprint(f"[yellow]No server with name {arg}")
             return
         self.server_manager[arg].accept_eula()
-        print("[green]accepted eula")
+        rprint("[green]accepted eula")
 
     def do_list_versions(self, arg: str):
         """list-versions (paper)"""
@@ -333,16 +334,16 @@ class Repl(cmd.Cmd):
             provider = providers.get_provider(arg)
             provider.list_versions()
         except ValueError as e:
-            print(f"[yellow]{e}")
+            rprint(f"[yellow]{e}")
         except AttributeError:
-            print(f"[red]Could not list versions for {arg}")
+            rprint(f"[red]Could not list versions for {arg}")
 
     def do_exit(self, _arg: None = None):
         """Exit"""
         for s in self.server_manager.values():
             if s.state == ServerState.RUNNING:
                 s.stop()
-                logging.info("Stopped %s", s.name)
+                logger.info(lambda s=s: f"Stopped {s.name}")
         return True
 
     def do_refresh(self, _arg: None = None):
@@ -350,4 +351,5 @@ class Repl(cmd.Cmd):
         self.server_manager = ServerManager(SERVERS_PATH)
 
     do_quit = do_exit
-    do_EOF = do_exit
+    do_EOF = do_exit  # noqa: N815
+    do_refresh = do_refresh

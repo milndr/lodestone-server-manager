@@ -12,17 +12,17 @@ def main():
         app = Lodestone()
         app.run()
     else:
-        from rich import print
+        from rich import print as rprint
 
         from lodestone.ui.cli import Repl
 
-        print("[dark_slate_gray3]Lodestone Server Manager")
-        print("[light_cyan3]Type help or ? to list commands.")
+        rprint("[dark_slate_gray3]Lodestone Server Manager")
+        rprint("[light_cyan3]Type help or ? to list commands.")
         current = Repl()
         try:
             current.cmdloop()
         except (EOFError, KeyboardInterrupt):
-            print()
+            rprint()
             current.do_exit()
 
 
