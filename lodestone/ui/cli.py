@@ -1,6 +1,5 @@
 import cmd
 import logging
-from pathlib import Path
 
 from rich import print
 from rich.console import Console
@@ -12,9 +11,9 @@ from rich.table import Table
 from lodestone.core import providers
 from lodestone.core.manager import ServerManager
 from lodestone.core.server import ServerState
+from lodestone.settings import SERVERS_PATH
 
 HEADERS = {"User-Agent": "lodestone-server-manager/0.0.1"}
-SERVERS_PATH = Path.cwd() / "Servers"
 
 logging.basicConfig(
     level=logging.DEBUG,

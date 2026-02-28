@@ -300,7 +300,7 @@ class Server:
                     cb(line)
 
         except Exception as e:
-            logging.error(f"Error reading logs: {e}")
+            logging.exception(f"Error reading logs: {e}")
         finally:
             self._handle_process_exit()
 
