@@ -5,7 +5,7 @@ from textual.widgets import Footer, Header
 
 from lodestone.core.manager import ServerManager
 from lodestone.core.server import ServerState
-from lodestone.settings import SERVERS_PATH
+from lodestone.settings import LOG_PATH, SERVERS_PATH
 from lodestone.ui.tui.messages import ServerCreated, ServerDeleted
 from lodestone.ui.tui.screens.home import HomeScreen, ServerListing
 from lodestone.utils.log import get_logger
@@ -14,7 +14,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[
-        logging.FileHandler("tui.log", encoding="utf-8"),
+        logging.FileHandler(LOG_PATH, encoding="utf-8"),
     ],
     force=True,
 )

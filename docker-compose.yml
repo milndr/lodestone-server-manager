@@ -1,0 +1,15 @@
+services:
+  lodestone:
+    build: .
+    container_name: lodestone-manager
+    network_mode: host
+    environment:
+      COLORTERM: truecolor
+      TERM: xterm-256color
+      LODESTONE_DATA_DIR: /data
+    volumes:
+      - ./data:/data
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    stop_grace_period: 15s
